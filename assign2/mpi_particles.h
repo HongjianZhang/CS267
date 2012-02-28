@@ -7,15 +7,6 @@
 #define EMIGRANT_TAG    1
 #define GHOST_TAG       2
 
-//
-// Emmigrant data structure
-//
-typedef struct 
-{
-    int part_index;
-    int dest_neighbor;
-} emigrant_t;
-
 extern MPI_Datatype PARTICLE;
 
 //
@@ -24,13 +15,18 @@ extern MPI_Datatype PARTICLE;
 void init_emigrant_buf(int n);
 void free_emigrant_buf();
 
+//
+// Functions to initialize ghost buffers
+//
 void setup_ghost_structure(int max_particles);
 void clean_ghost_structure();
 
-//TODO
+//
+// Functions to initialize each processor's set of particles at the beginning of the simulation, and to
+// save all the particles at the end of the simulation.
+//
 void select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, int* nlocal, int left_x, int right_x, int bottom_y, int top_y);
 void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
-	// prepare save copies all particles to 0, 0 then sorts
 bool compare_particles(particle_t left, particle_t right); // check if id < id
 
 //
