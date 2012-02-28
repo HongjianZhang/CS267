@@ -117,7 +117,7 @@ void send_ghost_packets(int neighbors[])
 	{
 		if(neighbors[i] != NONE)
 		{
-			MPI_Isend(ghost_packet_particles[i], ghost_packet_length[i], PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &(mpi_ghost_requests[++rc]));
+			MPI_Isend(ghost_packet_particles[i], ghost_packet_length[i], PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &(mpi_ghost_requests[rc++]));
 		}
 	}
 }
