@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
+#include "mpi_particles.h"
 
 #define GHOST_LENGTH (cutoff*2)
 
@@ -121,7 +122,7 @@ void send_ghost_packets(double neighbors[])
 	}
 }
 
-void receive_ghost_packets(int* num_ghost_particles, particle_t* ghost_particle, int* neighbors, int num_neighbors, int buf_size)
+void receive_ghost_packets(int* num_ghost_particles, particle_t* ghost_particles, int* neighbors, int num_neighbors, int buf_size)
 {
     MPI_Status status;
 	
@@ -143,3 +144,4 @@ void receive_ghost_packets(int* num_ghost_particles, particle_t* ghost_particle,
 
     // Make sure that all previous emigrant messages have been sent, as we need to reuse the buffers
     MPI_Waitall(num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
+}
