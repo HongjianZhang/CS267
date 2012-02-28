@@ -153,10 +153,9 @@ int main( int argc, char **argv )
 		//
 		//  Handle migration
 		//
-
 		prepare_emigrants(local, p_valid, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_emigrants(neighbors);
-		receive_immigrants(neighbors, num_neighbors, local, p_valid, n, n);
+		receive_immigrants(neighbors, num_neighbors, local, p_valid, &nlocal, n, n);
 		
 		//
         //  save current step if necessary

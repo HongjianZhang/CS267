@@ -18,6 +18,8 @@ int *emigrant_cnt;
 //
 MPI_Request mpi_em_requests[8];
 
+
+
 //
 // Allocates memory for the emigrant/immigrant buffers
 // 'buf_size' is in terms of number of particles, not bytes
