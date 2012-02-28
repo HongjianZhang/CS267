@@ -73,7 +73,7 @@ int main( int argc, char **argv )
 	right_x  = (proc_x==num_proc_x-1) ? (sim_size) : ((sim_size/num_proc_x)*(proc_x+1));
 	bottom_y = (proc_y==0)            ? (0)        : ((sim_size/num_proc_y)*proc_y);
 	top_y    = (proc_y==num_proc_y-1) ? (sim_size) : ((sim_size/num_proc_y)*(proc_y+1));
-	
+
 	// Determine the ranks of my neighbors for message passing, NONE means no neighbor
 	int neighbors[8];
 	int num_neighbors = 0;
@@ -93,7 +93,7 @@ int main( int argc, char **argv )
 	{
 		if(neighbors[i] != NONE) num_neighbors++;
 	}
-	
+    
     //
     //  allocate storage for local particles, ghost particles
     //
@@ -114,7 +114,7 @@ int main( int argc, char **argv )
         init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	select_particles(n, particles, local, p_valid, &nlocal, left_x, right_x, bottom_y, top_y);
+	nlocal = select_particles(n, particles, local, p_valid, left_x, right_x, bottom_y, top_y);
 	
 	particle_t* ghost_particles = (particle_t *) malloc(n * sizeof(particle_t));
 	int nghosts = 0;
@@ -266,7 +266,7 @@ bool compare_particles(particle_t left, particle_t right) // check if id < id
 	return left.globalID < right.globalID;
 }
 
-void select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, int* nlocal, int left_x, int right_x, int bottom_y, int top_y)
+int select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, double left_x, double right_x, double bottom_y, double top_y)
 // Note, does not take particles precisely on the top or right border.
 {
 	int current_particle = 0;
@@ -284,5 +284,5 @@ void select_particles(int n, particle_t* particles, particle_t* local, char* p_v
 	}
 	
 	// Make sure we know how many local particles we have.
-	*nlocal = current_particle;
+	return current_particle;
 }

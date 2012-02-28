@@ -25,7 +25,7 @@ void clean_ghost_structure();
 // Functions to initialize each processor's set of particles at the beginning of the simulation, and to
 // save all the particles at the end of the simulation.
 //
-void select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, int* nlocal, int left_x, int right_x, int bottom_y, int top_y);
+int select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, double left_x, double right_x, double bottom_y, double top_y);
 void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
 bool compare_particles(particle_t left, particle_t right); // check if id < id
 
