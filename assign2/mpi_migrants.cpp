@@ -17,8 +17,6 @@ int *emigrant_cnt;
 // Stores the state of asynchronous MPI sends
 //
 MPI_Request mpi_em_requests[8];
-MPI_Datatype PARTICLE;
-
 
 //
 // Allocates memory for the emigrant/immigrant buffers
