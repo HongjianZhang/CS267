@@ -43,7 +43,6 @@ int main( int argc, char **argv )
     //  allocate generic resources
     //
     FILE *fsave = savename && rank == 0 ? fopen( savename, "w" ) : NULL;
-    particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     
     MPI_Type_contiguous( 7, MPI_DOUBLE, &PARTICLE );
     MPI_Type_commit( &PARTICLE );
@@ -114,10 +113,10 @@ int main( int argc, char **argv )
     if( rank == 0 )
         init_particles( n, particles);
 	
-	MPI_Bcast((void *) particles, n, PARTICLES, 0, MPI_COMM_WORLD);
-	select_particles(n, particles, local, p_valid, &nlocal); //TODO WRITE ME
+	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
+	select_particles(n, particles, local, p_valid, &nlocal, left_x, right_x, bottom_y, top_y);
 	
-	ghost_particles = (particle_t *) malloc(max_particles * sizeof(particle_t));
+	particle_t* ghost_particles = (particle_t *) malloc(n * sizeof(particle_t));
 	int nghosts = 0;
 	
     //
@@ -142,7 +141,8 @@ int main( int argc, char **argv )
         //  Move particles
         //
 		int seen_particles = 0;
-		for(int i = 0; seen_particles < num_particles; ++i)
+		
+		for(int i = 0; seen_particles < nlocal; ++i)
 		{
 			if(p_valid[i] == INVALID) continue;
 			seen_particles++;
@@ -154,7 +154,7 @@ int main( int argc, char **argv )
 		//  Handle migration
 		//
 
-		prepare_emigrants(local, p_valid, &num_particles, left_x, right_x, bottom_y, top_y, neighbors);
+		prepare_emigrants(local, p_valid, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_emigrants(neighbors);
 		receive_immigrants(neighbors, num_neighbors, local, p_valid, n, n);
 		
@@ -210,7 +210,7 @@ void compute_forces(particle_t local[], char p_valid[], int num_particles, parti
 			apply_force( local[i], local[j] );
 		}
 		
-		for(int j; j < num_ghosts; ++j)
+		for(int j = 0; j < num_ghosts; ++j)
 		{
 			apply_force( local[i], ghosts[j]);
 		}
@@ -228,7 +228,7 @@ void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nl
 	if(rank == 0)
 	{
 		node_particles_offset[0] = 0;
-		for(i = 1; i < n_proc; ++i)
+		for(int i = 1; i < n_proc; ++i)
 		{
 			node_particles_offset[i] = node_particles_offset[i-1] + node_particles_num[i-1];
 		}
