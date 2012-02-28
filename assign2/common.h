@@ -19,6 +19,15 @@ const int p_nw = 5;
 const int p_n  = 6;
 const int p_ne = 7;
 
+const int P_SW = 0;
+const int P_S  = 1;
+const int P_SE = 2;
+const int P_W  = 3;
+const int P_E  = 4;
+const int P_NW = 5;
+const int P_N  = 6;
+const int P_NE = 7;
+
 const int NONE = -1;
 
 #define VALID   1
