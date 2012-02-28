@@ -73,7 +73,7 @@ void prepare_emigrants(particle_t* particles, char* p_valid, int* num_particles,
         emigrant_cnt[i] = 0;
 
     // Loop through all the particles, checking if they have left the bounds of this processor
-    for(int i = 0; num_particles_checked < num_particles; i++)
+    for(int i = 0; num_particles_checked < (*num_particles); i++)
     {
         if(p_valid[i] == INVALID)
             continue;
