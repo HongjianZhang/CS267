@@ -136,7 +136,7 @@ void receive_ghost_packets(int* num_ghost_particles, particle_t* ghost_particles
         if(neighbors[i] == NONE) continue;
 
         // Perform blocking read from neighbor
-        MPI_Recv ((void*)(ghost_particles[*num_ghost_particles]), (buf_size-(*num_ghost_particles)), PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status); 
+        MPI_Recv (ghost_particles+(*num_ghost_particles), (buf_size-(*num_ghost_particles)), PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status); 
 
         MPI_Get_count(&status, PARTICLE, &num_particles_rcvd);
 		*num_ghost_particles += num_particles_rcvd;
