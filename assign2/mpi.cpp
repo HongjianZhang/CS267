@@ -36,6 +36,8 @@ int main( int argc, char **argv )
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+	
+    double sim_size = set_size(n);
     
     //
     //  allocate generic resources
@@ -68,10 +70,10 @@ int main( int argc, char **argv )
 	
 	// Determine my cell boundaries
 	double left_x, right_x, bottom_y, top_y;
-	left_x   = (proc_x==0)            ? (0)    : ((size/num_proc_x)*proc_x);
-	right_x  = (proc_x==num_proc_x-1) ? (size) : ((size/num_proc_x)*(proc_x+1));
-	bottom_y = (proc_y==0)            ? (0)    : ((size/num_proc_y)*proc_y);
-	top_y    = (proc_y==num_proc_y-1) ? (size) : ((size/num_proc_y)*(proc_y+1));
+	left_x   = (proc_x==0)            ? (0)        : ((sim_size/num_proc_x)*proc_x);
+	right_x  = (proc_x==num_proc_x-1) ? (sim_size) : ((sim_size/num_proc_x)*(proc_x+1));
+	bottom_y = (proc_y==0)            ? (0)        : ((sim_size/num_proc_y)*proc_y);
+	top_y    = (proc_y==num_proc_y-1) ? (sim_size) : ((sim_size/num_proc_y)*(proc_y+1));
 	
 	// Determine the ranks of my neighbors for message passing, NONE means no neighbor
 	int neighbors[8];
@@ -109,7 +111,6 @@ int main( int argc, char **argv )
 
 	particle_t* particles = (particle_t*) malloc(n * sizeof(particle_t));
 	
-    set_size( n );
     if( rank == 0 )
         init_particles( n, particles);
 	
