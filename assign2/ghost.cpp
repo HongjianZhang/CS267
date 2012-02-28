@@ -30,7 +30,7 @@ void clean_ghost_structure()
 	}
 }
 
-void prepare_ghost_packets(particle_t particles[], char p_valid[], int num_particles, double left_x, double  right_x, double bottom_y, double top_y, double neighbors[])
+void prepare_ghost_packets(particle_t particles[], char p_valid[], int num_particles, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[])
 {
 	// Reset so will just overwrite old packet data
 	ghost_packet_length[p_sw] = 0; ghost_packet_length[p_s ] = 0; ghost_packet_length[p_se] = 0; ghost_packet_length[p_w ] = 0;
@@ -110,7 +110,7 @@ void prepare_ghost_packets(particle_t particles[], char p_valid[], int num_parti
 	}
 }
 
-void send_ghost_packets(double neighbors[])
+void send_ghost_packets(int neighbors[])
 {
 	int rc = 0;
 	for(int i = 0; i < 8; ++i)
