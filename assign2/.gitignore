@@ -1,1 +1,5 @@
 *.o
+*.stdout
+mpi
+mpi.txt
+
