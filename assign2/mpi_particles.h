@@ -30,7 +30,7 @@ void clean_ghost_structure();
 //TODO
 void select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, int* nlocal, int left_x, int right_x, int bottom_y, int top_y);
 
-void prepare_emigrants(particle_t* local, char* p_valid, int* num_particles, double left_x, double right_x, double bottom_y, double top_y, double neighbors);
+void prepare_emigrants(particle_t* local, char* p_valid, int* num_particles, double left_x, double right_x, double bottom_y, double top_y, int* neighbors);
 void send_emigrants(int* neighbors);
 
 void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
