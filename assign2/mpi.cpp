@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <algorithm>
 #include "common.h"
 #include "mpi_particles.h"
 
@@ -161,7 +162,7 @@ int main( int argc, char **argv )
         //
 		if(savename && (step%SAVEFREQ) == 0)
 		{
-			prepare_save(rank, local, p_valid, nlocal, particles, n);
+			prepare_save(rank, n_proc, local, p_valid, nlocal, particles, n);
 			
 			if(fsave)
 				save( fsave, n, particles );
@@ -213,4 +214,54 @@ void compute_forces(particle_t local[], char p_valid[], int num_particles, parti
 			apply_force( local[i], ghosts[j]);
 		}
 	}
+}
+
+void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n)
+{
+	// First, get the number of particles in each node into node 0. Also prepare array placement offsets.
+	int* node_particles_num    = (int *) malloc(n_proc*sizeof(int));
+	int* node_particles_offset = (int *) malloc(n_proc*sizeof(int));
+	
+	MPI_Gather(&nlocal, 1, MPI_INT, node_particles_num, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	if(rank == 0)
+	{
+		node_particles_offset[0] = 0;
+		for(i = 1; i < n_proc; ++i)
+		{
+			node_particles_offset[i] = node_particles_offset[i-1] + node_particles_num[i-1];
+		}
+	}
+	
+	// Now, each node prepares a collapsed list of all valid particles
+	particle_t* collapsed_local = (particle_t *) malloc(nlocal * sizeof(particle_t));
+	
+	int seen_particles = 0;
+	for(int i = 0; seen_particles < nlocal; ++i)
+	{
+		if(p_valid[i] == INVALID) continue;
+		
+		collapsed_local[seen_particles] = local[i];
+		
+		seen_particles++;
+	}
+	
+	// Next, send the particles to node 0
+	MPI_Gatherv(collapsed_local, nlocal, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
+	
+	// Finally, sort the particles at node 0
+	if(rank == 0)
+	{
+		sort(particles, particles + n, compare_particles);
+	}
+	
+	
+	// Clean up
+	free(collapsed_local);
+	free(node_particles_num);
+	free(node_particles_offset);
+}
+bool compare_particles(particle_t left, particle_t right) // check if id < id
+{
+	return left.globalID < right.globalID;
 }

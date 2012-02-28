@@ -33,7 +33,7 @@ void select_particles(int n, particle_t* particles, particle_t* local, char* p_v
 void prepare_emigrants(particle_t* local, char* p_valid, int* num_particles, double left_x, double right_x, double bottom_y, double top_y, double neighbors);
 void send_emigrants(int* neighbors);
 
-void prepare_save(int rank, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
+void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
 	// prepare save copies all particles to 0, 0 then sorts
 bool compare_particles(particle_t left, particle_t right); // check if id < id
 
