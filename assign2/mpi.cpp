@@ -265,3 +265,24 @@ bool compare_particles(particle_t left, particle_t right) // check if id < id
 {
 	return left.globalID < right.globalID;
 }
+
+void select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, int* nlocal, int left_x, int right_x, int bottom_y, int top_y)
+// Note, does not take particles precisely on the top or right border.
+{
+	int current_particle = 0;
+	
+	for(int i = 0; i < n; ++i)
+	{
+		if((particles[i].x >= left_x) && (particles[i].x < right_x) && (particles[i].y >= bottom_y) && (particles[i].y < top_y))
+		// Particle in my box, take it
+		{
+			local[current_particle] = particles[i];
+			p_valid[current_particle] = VALID;
+			
+			current_particle++;
+		}
+	}
+	
+	// Make sure we know how many local particles we have.
+	*nlocal = current_particle;
+}
