@@ -1,7 +1,6 @@
 #ifndef __MPI_PARTICLES_H__
 #define __MPI_PARTICLES_H__
 
-#include <vector>
 #include <mpi.h>
 
 #define EMIGRANT_TAG    1
@@ -27,14 +26,14 @@ void clean_ghost_structure();
 //
 int select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, double left_x, double right_x, double bottom_y, double top_y);
 void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
-bool compare_particles(particle_t left, particle_t right); // check if id < id
+bool compare_particles(particle_t left, particle_t right); // check if left_id < right_id
 
 //
 // Functions to send/receive emigrants
 //
-void prepare_emigrants(particle_t* particles, char* p_valid, int* num_particles, double left_x, double right_x, double bottom_y, double top_y, int* neighbors);
+void prepare_emigrants(partition* part, int* local_ids, int* local_n, double left_x, double right_x, double bottom_y, double top_y, int* neighbors);
 void send_emigrants(int* neighbors);
-void receive_immigrants(int* neighbors, int num_neighbors, particle_t* particles, char* p_valid, int* num_particles, int array_sz, int buf_size);
+void receive_immigrants(int* neighbors, int num_neighbors, partition* part, int* local_ids, int* local_n, int buf_size);
 
 //
 // Functions to send/receive ghost particles
