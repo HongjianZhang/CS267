@@ -223,7 +223,7 @@ void sweep_and_prune(partition* p){
 //====================== Collision Detector Interface ============================
 //================================================================================
 
-int add_particle(partition* part, particle_t* p){
+int add_particle(partition* part, particle_t p){
   //Safety check
   if(part->num_used_ids >= part->max_particles){
     printf("Can not add another particle. Maximum number of particles reached.\n");
@@ -236,7 +236,7 @@ int add_particle(partition* part, particle_t* p){
   //Set active
   part->is_id_active[id] = 1;
   //Copy data
-  part->particles[id] = *p;
+  part->particles[id] = p;
 
   //If we are using more ids than particles, then create more
   if(part->num_used_ids > part->num_particles){    

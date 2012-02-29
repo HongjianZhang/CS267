@@ -11,7 +11,7 @@ void run_simulation(particle_t* ps, int n, FILE* fsave){
   //Create partition and set active
   partition* p1 = alloc_partition(n);
   for(int i=0; i<n; i++)
-    int id = add_particle(p1, &ps[i]);
+    int id = add_particle(p1, ps[i]);
 
   //For each step
   for(int step = 0; step < NSTEPS; step++ ){

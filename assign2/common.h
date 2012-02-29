@@ -65,7 +65,7 @@ typedef struct {
 //================================================================================
 partition* alloc_partition(int max_particles);
 void free_partition(partition* p);
-int add_particle(partition* part, particle_t* p);
+int add_particle(partition* part, particle_t p);
 void remove_particle(partition* p, int id);
 void set_ghost(partition* p, int id, int is_ghost);
 void set_state(partition* p, int id, double x, double y, double vx, double vy);
