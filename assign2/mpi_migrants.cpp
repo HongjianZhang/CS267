@@ -58,72 +58,71 @@ void free_emigrant_buf()
 // Determines which of the particles on this processor are emigrants.
 // The code searches through all the particles in 'particles', comparing their position to provided x,y processor boundaries.
 // If a particle is outside the processor boundaries, it is REMOVED from the 'particles' array and added to the global
-// emigrant buf. 'num_particles' is updated at the end with the number of particles currently remaining in the system.
+// emigrant buf. 'local_n' is updated at the end with the number of particles currently remaining in the system.
 // 'neighbors' is indexed by the direction values (e.g. N=0, S=1, etc) and gives the corresponding neighbor's rank.
 // If a neighbor is not present, its direction is indicated as -1.
 //
-void prepare_emigrants(particle_t* particles, char* p_valid, int* num_particles, double left_x, double right_x, double bottom_y, double top_y, int* neighbors)
+void prepare_emigrants(partition* part, int* local_ids, int* local_n, double left_x, double right_x, double bottom_y, double top_y, int* neighbors)
 {
-    int num_particles_checked = 0;
     int num_particles_removed = 0;
     int exit_dir;
+    particle_t particle;
 
     // Initialize all emigrant counts to zero
     for(int i = 0; i < 8; i++)
         emigrant_cnt[i] = 0;
 
     // Loop through all the particles, checking if they have left the bounds of this processor
-    for(int i = 0; num_particles_checked < (*num_particles); i++)
+    for(int i = 0; i < (*local_n); i++)
     {
-        if(p_valid[i] == INVALID)
-            continue;
+        particle = *(get_particle(part, local_ids[i]));
 
         exit_dir = -1;
 
         // If moved north-west
-        if( (particles[i].y > top_y) && (particles[i].x < left_x) && (neighbors[P_NW] != -1))
+        if( (particle.y > top_y) && (particle.x < left_x) && (neighbors[P_NW] != -1))
         {
             exit_dir = P_NW;
         }
 
         // Else if moved north-east
-        else if( (particles[i].y > top_y) && (particles[i].x > right_x) && (neighbors[P_NE] != -1))
+        else if( (particle.y > top_y) && (particle.x > right_x) && (neighbors[P_NE] != -1))
         {
             exit_dir = P_NE;
         }
 
         // Else if moved north
-        else if( (particles[i].y > top_y) && (neighbors[P_N] != -1))
+        else if( (particle.y > top_y) && (neighbors[P_N] != -1))
         {
             exit_dir = P_N;
         }
 
         // Else if moved south-west
-        else if( (particles[i].y < bottom_y) && (particles[i].x < left_x) && (neighbors[P_SW] != -1))
+        else if( (particle.y < bottom_y) && (particle.x < left_x) && (neighbors[P_SW] != -1))
         {
             exit_dir = P_SW;
         }
 
         // Else if moved south-east
-        else if( (particles[i].y < bottom_y) && (particles[i].x > right_x) && (neighbors[P_SE] != -1))
+        else if( (particle.y < bottom_y) && (particle.x > right_x) && (neighbors[P_SE] != -1))
         {
             exit_dir = P_SE;
         }
 
         // Else if moved south
-        else if( (particles[i].y < bottom_y) && (neighbors[P_S] != -1))
+        else if( (particle.y < bottom_y) && (neighbors[P_S] != -1))
         {
             exit_dir = P_S;
         }
 
         // Else if moved west
-        else if( (particles[i].x < left_x) && (neighbors[P_W] != -1))
+        else if( (particle.x < left_x) && (neighbors[P_W] != -1))
         {
             exit_dir = P_W;
         }
 
         // Else if moved east
-        else if( (particles[i].x > right_x) && (neighbors[P_E] != -1))
+        else if( (particle.x > right_x) && (neighbors[P_E] != -1))
         {
             exit_dir = P_E;
         }
@@ -131,17 +130,15 @@ void prepare_emigrants(particle_t* particles, char* p_valid, int* num_particles,
         // If the particle is an emigrant, remove it from the array and place it in the correct buffer
         if(exit_dir != -1)
         {
-            emigrant_buf[exit_dir][emigrant_cnt[exit_dir]] = particles[i];
+            emigrant_buf[exit_dir][emigrant_cnt[exit_dir]] = particle;
             emigrant_cnt[exit_dir] += 1;
-            remove_particle(i, p_valid);
+            remove_particle(part, local_ids[i]);
             num_particles_removed++;
         }
-
-        num_particles_checked++;
     }
 
     // Update the count of active particles on this processor
-    (*num_particles) -= num_particles_removed;
+    (*local_n) -= num_particles_removed;
 }
 
 
@@ -172,13 +169,14 @@ void send_emigrants(int* neighbors)
 // them to the list of local particles.
 // 'neighbors' is indexed by the direction values (e.g. N=0, S=1, etc) and gives the corresponding neighbor's rank.
 // If a neighbor is not present, its direction is indicated as -1.
-// 'num_particles' is the number of valid particles on this processor, and is updated once all particles have been received.
+// 'local_n' is the number of valid particles on this processor, and is updated once all particles have been received.
 // 'buf_size' is in terms of number of particles, not bytes
 //
-void receive_immigrants(int* neighbors, int num_neighbors, particle_t* particles, char* p_valid, int* num_particles, int array_sz, int buf_size)
+void receive_immigrants(int* neighbors, int num_neighbors, partition* part, int* local_ids, int* local_n, int buf_size)
 {
     MPI_Status status;
     int num_particles_rcvd = 0;
+    int new_id;
 
     for(int i = 0; i < 8; i++)
     {
@@ -192,17 +190,13 @@ void receive_immigrants(int* neighbors, int num_neighbors, particle_t* particles
         MPI_Get_count(&status, PARTICLE, &num_particles_rcvd);
 
         // If the neighbor sent particles, add them to the local particle list
+        // Also update the number of particles stored locally on this processor
         for(int j = 0; j < num_particles_rcvd; j++)
         {
-            if(add_particle(immigrant_buf[j], array_sz, particles, p_valid) == -1)
-            {
-                printf("Error: insufficient space to add particle to local array\n");
-                exit(-1);
-            }
+            new_id = add_particle(part, immigrant_buf[j]);
+            local_ids[*local_n] = new_id;
+            *(local_n) += 1;
         }
-
-        // Update the number of particles on the local processor
-        (*num_particles) += num_particles_rcvd;
     }
 
     // Make sure that all previous emigrant messages have been sent, as we need to reuse the buffers
