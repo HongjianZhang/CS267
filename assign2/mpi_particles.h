@@ -24,8 +24,8 @@ void clean_ghost_structure();
 // Functions to initialize each processor's set of particles at the beginning of the simulation, and to
 // save all the particles at the end of the simulation.
 //
-int select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, double left_x, double right_x, double bottom_y, double top_y);
-void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n);
+int select_particles(partition* part, int n, particle_t* particles, int* local_ids, double left_x, double right_x, double bottom_y, double top_y);
+void prepare_save(partition* part, int rank, int n_proc, int* local_ids, int nlocal, particle_t* particles, int n);
 bool compare_particles(particle_t left, particle_t right); // check if left_id < right_id
 
 //
@@ -38,10 +38,8 @@ void receive_immigrants(int* neighbors, int num_neighbors, partition* part, int*
 //
 // Functions to send/receive ghost particles
 //
-void prepare_ghost_packets(particle_t particles[], char p_valid[], int num_particles, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[]);
+void prepare_ghost_packets(partition* part, int* local_ids, int nlocal, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[]);
 void send_ghost_packets(int neighbors[]);
-void receive_ghost_packets(int* num_ghost_particles, particle_t* ghost_particle, int* neighbors, int num_neighbors, int buf_size);
-
-void compute_forces(particle_t local[], char p_valid[], int num_particles, particle_t ghosts[], int num_ghosts);
+void receive_ghost_packets(partition* part, int* ghost_ids, int* nghosts, int* neighbors, int num_neighbors, int buf_size);
 
 #endif

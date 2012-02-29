@@ -95,11 +95,15 @@ int main( int argc, char **argv )
 	}
     
     //
-    //  allocate storage for local particles, ghost particles
+    //  allocate storage for local particles, ghost particles, ids
     //
-    particle_t *local = (particle_t*) malloc( n * sizeof(particle_t) );
-	char *p_valid = (char*) malloc(n*sizeof(char));
-	int nlocal;
+	partition* part = alloc_partition(n);
+
+	int* local_ids = (int*) malloc(n*sizeof(int));
+	int nlocal = 0;
+	
+	int* ghost_ids = (int*) malloc(n*sizeof(int));
+	int nghost = 0;
 	
 	setup_ghost_structure(n);
 	init_emigrant_buf(n);
@@ -114,10 +118,7 @@ int main( int argc, char **argv )
         init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	nlocal = select_particles(n, particles, local, p_valid, left_x, right_x, bottom_y, top_y);
-	
-	particle_t* ghost_particles = (particle_t *) malloc(n * sizeof(particle_t));
-	int nghosts = 0;
+	nlocal = select_particles(part, n, particles, local, left_x, right_x, bottom_y, top_y);
 	
     //
     //  simulate a number of time steps
@@ -128,27 +129,14 @@ int main( int argc, char **argv )
 		//
 		//  Handle ghosting
 		//
-		prepare_ghost_packets(local, p_valid, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
+		prepare_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_ghost_packets(neighbors);
-		receive_ghost_packets(&nghosts, ghost_particles, neighbors, num_neighbors, n);
+		receive_ghost_packets(part, ghost_ids, &nghost, neighbors, num_neighbors, n);
 		
         //
         //  Compute all forces
         //
-		compute_forces(local, p_valid, nlocal, ghost_particles, nghosts);
-        
-        //
-        //  Move particles
-        //
-		int seen_particles = 0;
-		
-		for(int i = 0; seen_particles < nlocal; ++i)
-		{
-			if(p_valid[i] == INVALID) continue;
-			seen_particles++;
-			
-            move( local[i] );
-		}
+		update_particles(part);
 		
 		//
 		//  Handle migration
@@ -157,12 +145,16 @@ int main( int argc, char **argv )
 		send_emigrants(neighbors);
 		receive_immigrants(neighbors, num_neighbors, local, p_valid, &nlocal, n, n);
 		
+		prepare_emigrants(part, local_ids, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
+		send_emigrants(neighbors);
+		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n);
+		
 		//
         //  save current step if necessary
         //
 		if(savename && (step%SAVEFREQ) == 0)
 		{
-			prepare_save(rank, n_proc, local, p_valid, nlocal, particles, n);
+			prepare_save(part, rank, n_proc, local, nlocal, particles, n);
 			
 			if(fsave)
 				save( fsave, n, particles );
@@ -176,9 +168,9 @@ int main( int argc, char **argv )
     //
     //  release resources
     //
-    free( local );
+    free( local_ids );
+    free( ghost_ids );
     free( particles );
-	free( ghost_particles );
 	
 	free_emigrant_buf();
 	clean_ghost_structure();
@@ -191,32 +183,7 @@ int main( int argc, char **argv )
     return 0;
 }
 
-void compute_forces(particle_t local[], char p_valid[], int num_particles, particle_t ghosts[], int num_ghosts)
-{
-	int seen_particles = 0;
-	for(int i = 0; seen_particles < num_particles; ++i)
-	{
-		if(p_valid[i] == INVALID) continue;
-		seen_particles++;
-		
-		local[i].ax = local[i].ay = 0;
-		int nearby_seen_particles = 0;
-		for (int j = 0; nearby_seen_particles < num_particles; ++j)
-		{
-			if(p_valid[j] == INVALID) continue;
-			nearby_seen_particles++;
-			
-			apply_force( local[i], local[j] );
-		}
-		
-		for(int j = 0; j < num_ghosts; ++j)
-		{
-			apply_force( local[i], ghosts[j]);
-		}
-	}
-}
-
-void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nlocal, particle_t* particles, int n)
+void prepare_save(partition* part, int rank, int n_proc, int* local_ids, int nlocal, particle_t* particles, int n)
 {
 	// First, get the number of particles in each node into node 0. Also prepare array placement offsets.
 	int* node_particles_num    = (int *) malloc(n_proc*sizeof(int));
@@ -236,14 +203,10 @@ void prepare_save(int rank, int n_proc, particle_t* local, char* p_valid, int nl
 	// Now, each node prepares a collapsed list of all valid particles
 	particle_t* collapsed_local = (particle_t *) malloc(nlocal * sizeof(particle_t));
 	
-	int seen_particles = 0;
-	for(int i = 0; seen_particles < nlocal; ++i)
+	for(int i = 0; i < nlocal; ++i)
 	{
-		if(p_valid[i] == INVALID) continue;
-		
-		collapsed_local[seen_particles] = local[i];
-		
-		seen_particles++;
+		particle_t packing = *(get_particle(part, local_id[i]));
+		collapsed_local[i] = packing;
 	}
 	
 	// Next, send the particles to node 0
@@ -266,7 +229,7 @@ bool compare_particles(particle_t left, particle_t right) // check if id < id
 	return left.globalID < right.globalID;
 }
 
-int select_particles(int n, particle_t* particles, particle_t* local, char* p_valid, double left_x, double right_x, double bottom_y, double top_y)
+int select_particles(partition* part, int n, particle_t* particles, int* local_ids, double left_x, double right_x, double bottom_y, double top_y)
 // Note, does not take particles precisely on the top or right border.
 {
 	int current_particle = 0;
@@ -276,8 +239,7 @@ int select_particles(int n, particle_t* particles, particle_t* local, char* p_va
 		if((particles[i].x >= left_x) && (particles[i].x < right_x) && (particles[i].y >= bottom_y) && (particles[i].y < top_y))
 		// Particle in my box, take it
 		{
-			local[current_particle] = particles[i];
-			p_valid[current_particle] = VALID;
+			local_ids[current_particle] = add_particle(part, particles[i]);
 			
 			current_particle++;
 		}

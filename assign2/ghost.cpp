@@ -44,7 +44,7 @@ void prepare_ghost_packets(partition* part, int* local_ids, int nlocal, double l
 	
 	for(int i = 0; i < nlocal; ++i)
 	{
-		particle_t particle = get_particle(part, i);
+		particle_t particle = *get_particle(part, i);
 		
 		if(particle.x <= (left_x + GHOST_LENGTH)) // check if in W, SW, or NW ghost zone by x
 		{
