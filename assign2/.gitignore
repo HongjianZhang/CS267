@@ -1,5 +1,6 @@
 *.o
 *.stdout
 mpi
-mpi.txt
-
+serial
+*.txt
+job-hopper-test
