@@ -209,11 +209,11 @@ void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int n
 	MPI_Gatherv(collapsed_local, nlocal, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
 	
 	// Finally, sort the particles at node 0
-/*	if(rank == 0)
+	if(rank == 0)
 	{
 		sort(particles, particles + n, compare_particles);
 	}
-*/	
+	
 	
 	// Clean up
 	free(collapsed_local);
