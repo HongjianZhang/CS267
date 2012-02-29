@@ -16,51 +16,6 @@ const int R = 1;
 const int L = -1;
 
 //================================================================================
-//========================== Structures ==========================================
-//================================================================================
-
-//Collision Token
-typedef struct {
-  double position;
-  int type;
-  int particle_id;
-} token;
-
-//Active collisions
-//List of [particle_id1 particle_id2] pairs
-typedef struct {
-  int id1;
-  int id2;
-} collision;
-
-//Holds the information for a single partition
-typedef struct {
-  //Particles
-  particle_t* particles;
-  int num_particles;
-  int max_particles;
-
-  //Active IDs
-  int* is_id_active;
-  int* free_ids;
-  int num_used_ids;
-
-  //Ghost flags
-  int* is_ghost;
-
-  //Collision Tokens
-  token* xtokens;
-  token* ytokens;
-
-  //Active Collisions
-  collision* active_collisions;
-  int num_active_collisions;
-
-  //Collision table
-  char* collision_table;
-} partition;
-
-//================================================================================
 //========================== Triangular Matrix Utilities =========================
 //================================================================================
 

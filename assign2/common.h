@@ -4,6 +4,63 @@
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
 
+//================================================================================
+//========================== Structures ==========================================
+//================================================================================
+
+//Collision Token
+typedef struct {
+  double position;
+  int type;
+  int particle_id;
+} token;
+
+//Active collisions
+//List of [particle_id1 particle_id2] pairs
+typedef struct {
+  int id1;
+  int id2;
+} collision;
+
+//Holds the information for a single partition
+typedef struct {
+  //Particles
+  particle_t* particles;
+  int num_particles;
+  int max_particles;
+
+  //Active IDs
+  int* is_id_active;
+  int* free_ids;
+  int num_used_ids;
+
+  //Ghost flags
+  int* is_ghost;
+
+  //Collision Tokens
+  token* xtokens;
+  token* ytokens;
+
+  //Active Collisions
+  collision* active_collisions;
+  int num_active_collisions;
+
+  //Collision table
+  char* collision_table;
+} partition;
+
+//================================================================================
+//====================== Collision Detector Interface ============================
+//================================================================================
+partition* alloc_partition(int max_particles);
+int add_particle(partition* part, particle_t* p);
+void remove_particle(partition* p, int id);
+void set_ghost(partition* p, int id, int is_ghost);
+void set_state(partition* p, int id, double x, double y, double vx, double vy);
+particle_t* get_particle(partition* p, int id);
+void update_particles(partition* p);
+
+
 //
 //  saving parameters
 //
