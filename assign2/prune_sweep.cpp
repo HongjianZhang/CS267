@@ -75,6 +75,19 @@ partition* alloc_partition(int max_particles){
   return p;
 }
 
+//Free a partition
+void free_partition(partition* p){
+  free(p->particles);
+  free(p->is_id_active);
+  free(p->free_ids);
+  free(p->is_ghost);
+  free(p->xtokens);
+  free(p->ytokens);
+  free(p->active_collisions);
+  free(p->collision_table);
+  free(p);
+}
+
 //================================================================================
 //======================= Collision Detector =====================================
 //================================================================================
