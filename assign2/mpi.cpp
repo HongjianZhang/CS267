@@ -97,7 +97,7 @@ int main( int argc, char **argv )
     //
     //  allocate storage for local particles, ghost particles, ids
     //
-	partition* part = alloc_partition(n);
+	partition_t* part = alloc_partition(n);
 
 	int* local_ids = (int*) malloc(n*sizeof(int));
 	int nlocal = 0;
@@ -183,7 +183,7 @@ int main( int argc, char **argv )
     return 0;
 }
 
-void prepare_save(partition* part, int rank, int n_proc, int* local_ids, int nlocal, particle_t* particles, int n)
+void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int nlocal, particle_t* particles, int n)
 {
 	// First, get the number of particles in each node into node 0. Also prepare array placement offsets.
 	int* node_particles_num    = (int *) malloc(n_proc*sizeof(int));
@@ -229,7 +229,7 @@ bool compare_particles(particle_t left, particle_t right) // check if id < id
 	return left.globalID < right.globalID;
 }
 
-int select_particles(partition* part, int n, particle_t* particles, int* local_ids, double left_x, double right_x, double bottom_y, double top_y)
+int select_particles(partition_t* part, int n, particle_t* particles, int* local_ids, double left_x, double right_x, double bottom_y, double top_y)
 // Note, does not take particles precisely on the top or right border.
 {
 	int current_particle = 0;

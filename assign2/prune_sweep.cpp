@@ -34,9 +34,9 @@ inline int triangle_idx(int n, int row, int col){
 //================================================================================
 
 //Create a new partition
-partition* alloc_partition(int max_particles){
+partition_t* alloc_partition(int max_particles){
   //Allocate partition structure
-  partition* p = (partition*)malloc(sizeof(partition));
+  partition_t* p = (partition_t*)malloc(sizeof(partition_t));
 
   //Allocate space for particles
   p->max_particles = max_particles;
@@ -76,7 +76,7 @@ partition* alloc_partition(int max_particles){
 }
 
 //Free a partition
-void free_partition(partition* p){
+void free_partition(partition_t* p){
   free(p->particles);
   free(p->is_id_active);
   free(p->free_ids);
@@ -93,7 +93,7 @@ void free_partition(partition* p){
 //================================================================================
 
 //Register an active collision
-void register_active_collision(partition* p, int id1, int id2){
+void register_active_collision(partition_t* p, int id1, int id2){
   collision* c = &((p->active_collisions)[p->num_active_collisions]);
   p->num_active_collisions++;
   c->id1 = id1;
@@ -101,7 +101,7 @@ void register_active_collision(partition* p, int id1, int id2){
 }
 
 //Mark id1 and id2 as intersecting
-void mark_intersection(partition* p, int id1, int id2){
+void mark_intersection(partition_t* p, int id1, int id2){
   int min_id = min(id1, id2);
   int max_id = max(id1, id2);
   
@@ -114,7 +114,7 @@ void mark_intersection(partition* p, int id1, int id2){
 }
 
 //Unmark id1 and id2 as intersecting
-void unmark_intersection(partition* p, int id1, int id2){
+void unmark_intersection(partition_t* p, int id1, int id2){
   int min_id = min(id1, id2);
   int max_id = max(id1, id2);
   
@@ -123,7 +123,7 @@ void unmark_intersection(partition* p, int id1, int id2){
 }
 
 //Notify collision detector that token t1 and t2 has been swapped
-void swap(partition* p, token t1, token t2){
+void swap(partition_t* p, token t1, token t2){
   if(t1.type == R && t2.type == L)
     mark_intersection(p, t1.particle_id, t2.particle_id);
   else if(t1.type == L && t2.type == R)
@@ -133,7 +133,7 @@ void swap(partition* p, token t1, token t2){
 //Sinking sort with collision detection logic
 //Sinks element i down to its rightful position.
 //Assumes list up to i is sorted.
-inline void sweep_down(partition* p, token* tokens, int i){
+inline void sweep_down(partition_t* p, token* tokens, int i){
   while(i>0) {
     token t1 = tokens[i-1];
     token t2 = tokens[i];
@@ -154,14 +154,14 @@ inline void sweep_down(partition* p, token* tokens, int i){
 
 //Sweep through tokens from i = 1 ... num_tokens
 //Sinking sort elements
-void sweep(partition* p, token* tokens){
+void sweep(partition_t* p, token* tokens){
   for(int i=1; i<2 * p->num_particles; i++)
     sweep_down(p, tokens, i);
 }
 
 //Prune the active collisions
 //Keep only the ones where num intersections is >= 2
-void prune(partition* p){
+void prune(partition_t* p){
   collision* dest = p->active_collisions;
 
   int collision_length = p->num_active_collisions;  
@@ -191,7 +191,7 @@ void prune(partition* p){
 }
 
 //Update the token information in the collision detector
-void update_tokens(partition* part){
+void update_tokens(partition_t* part){
   //Update x tokens
   for(int i=0; i<2 * part->num_particles; i++){
     token* t = &(part->xtokens[i]);
@@ -212,7 +212,7 @@ void update_tokens(partition* part){
 }
 
 //Full Collision Detection Sweep
-void sweep_and_prune(partition* p){
+void sweep_and_prune(partition_t* p){
   update_tokens(p);
   sweep(p,p->xtokens);
   sweep(p,p->ytokens);
@@ -223,7 +223,7 @@ void sweep_and_prune(partition* p){
 //====================== Collision Detector Interface ============================
 //================================================================================
 
-int add_particle(partition* part, particle_t p){
+int add_particle(partition_t* part, particle_t p){
   //Safety check
   if(part->num_used_ids >= part->max_particles){
     printf("Can not add another particle. Maximum number of particles reached.\n");
@@ -274,14 +274,14 @@ int add_particle(partition* part, particle_t p){
   return id;
 }
 
-void ensure_active(partition* p, int id){
+void ensure_active(partition_t* p, int id){
   if(!p->is_id_active[id]){
     printf("Particle %d is not active.\n", id);
     exit(-1);
   }
 }
 
-void remove_particle(partition* p, int id){
+void remove_particle(partition_t* p, int id){
   ensure_active(p, id);
 
   //Set inactive
@@ -291,12 +291,12 @@ void remove_particle(partition* p, int id){
   p->free_ids[p->num_used_ids] = id;
 }
 
-void set_ghost(partition* p, int id, int is_ghost){
+void set_ghost(partition_t* p, int id, int is_ghost){
   ensure_active(p, id);
   p->is_ghost[id] = is_ghost;
 }
 
-void set_state(partition* p, int id, double x, double y, double vx, double vy){
+void set_state(partition_t* p, int id, double x, double y, double vx, double vy){
   ensure_active(p, id);
   p->particles[id].x = x;
   p->particles[id].y = y;
@@ -304,7 +304,7 @@ void set_state(partition* p, int id, double x, double y, double vx, double vy){
   p->particles[id].vy = vy;
 }
 
-particle_t* get_particle(partition* p, int id){
+particle_t* get_particle(partition_t* p, int id){
   ensure_active(p, id);
   return &(p->particles[id]);
 }
@@ -335,7 +335,7 @@ void apply_pairwise_force(particle_t* p1, particle_t* p2) {
   }
 }
 
-void update_particles(partition* p){
+void update_particles(partition_t* p){
   //Calculate active collisions
   sweep_and_prune(p);
 

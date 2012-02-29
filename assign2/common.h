@@ -58,19 +58,19 @@ typedef struct {
 
   //Collision table
   char* collision_table;
-} partition;
+} partition_t;
 
 //================================================================================
 //====================== Collision Detector Interface ============================
 //================================================================================
-partition* alloc_partition(int max_particles);
-void free_partition(partition* p);
-int add_particle(partition* part, particle_t p);
-void remove_particle(partition* p, int id);
-void set_ghost(partition* p, int id, int is_ghost);
-void set_state(partition* p, int id, double x, double y, double vx, double vy);
-particle_t* get_particle(partition* p, int id);
-void update_particles(partition* p);
+partition_t* alloc_partition(int max_particles);
+void free_partition_t(partition_t* p);
+int add_particle(partition_t* part, particle_t p);
+void remove_particle(partition_t* p, int id);
+void set_ghost(partition_t* p, int id, int is_ghost);
+void set_state(partition_t* p, int id, double x, double y, double vx, double vy);
+particle_t* get_particle(partition_t* p, int id);
+void update_particles(partition_t* p);
 
 
 //

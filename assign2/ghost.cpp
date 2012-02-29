@@ -36,7 +36,7 @@ void clean_ghost_structure()
 	free(received_ghosts);
 }
 
-void prepare_ghost_packets(partition* part, int* local_ids, int nlocal, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[])
+void prepare_ghost_packets(partition_t* part, int* local_ids, int nlocal, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[])
 {
 	// Reset so will just overwrite old packet data
 	ghost_packet_length[p_sw] = 0; ghost_packet_length[p_s ] = 0; ghost_packet_length[p_se] = 0; ghost_packet_length[p_w ] = 0;
@@ -126,7 +126,7 @@ void send_ghost_packets(int neighbors[])
 	}
 }
 
-void receive_ghost_packets(partition* part, int* ghost_ids, int* nghosts, int* neighbors, int num_neighbors, int buf_size)
+void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int* neighbors, int num_neighbors, int buf_size)
 {
     MPI_Status status;
 	
