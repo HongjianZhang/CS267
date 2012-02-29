@@ -118,7 +118,7 @@ int main( int argc, char **argv )
         init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	nlocal = select_particles(part, n, particles, local, left_x, right_x, bottom_y, top_y);
+	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
 	
     //
     //  simulate a number of time steps
@@ -141,10 +141,6 @@ int main( int argc, char **argv )
 		//
 		//  Handle migration
 		//
-		prepare_emigrants(local, p_valid, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
-		send_emigrants(neighbors);
-		receive_immigrants(neighbors, num_neighbors, local, p_valid, &nlocal, n, n);
-		
 		prepare_emigrants(part, local_ids, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_emigrants(neighbors);
 		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n);
@@ -154,7 +150,7 @@ int main( int argc, char **argv )
         //
 		if(savename && (step%SAVEFREQ) == 0)
 		{
-			prepare_save(part, rank, n_proc, local, nlocal, particles, n);
+			prepare_save(part, rank, n_proc, local_ids, nlocal, particles, n);
 			
 			if(fsave)
 				save( fsave, n, particles );
@@ -205,7 +201,7 @@ void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int n
 	
 	for(int i = 0; i < nlocal; ++i)
 	{
-		particle_t packing = *(get_particle(part, local_id[i]));
+		particle_t packing = *(get_particle(part, local_ids[i]));
 		collapsed_local[i] = packing;
 	}
 	

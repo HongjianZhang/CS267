@@ -6,6 +6,9 @@
 #define EMIGRANT_TAG    1
 #define GHOST_TAG       2
 
+#define GHOST_TRUE	1
+#define GHOST_FALSE	0
+
 extern MPI_Datatype PARTICLE;
 
 //
