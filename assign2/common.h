@@ -76,7 +76,7 @@ void update_particles(partition_t* p);
 //
 //  saving parameters
 //
-const int NSTEPS = 1000;
+const int NSTEPS = 100;
 const int SAVEFREQ = 10;
 
 const int p_sw = 0;
