@@ -8,6 +8,17 @@ inline int max( int a, int b ) { return a > b ? a : b; }
 //========================== Structures ==========================================
 //================================================================================
 
+typedef struct 
+{
+  double x;
+  double y;
+  double vx;
+  double vy;
+  double ax;
+  double ay;
+  int globalID;
+} particle_t;
+
 //Collision Token
 typedef struct {
   double position;
@@ -53,7 +64,7 @@ typedef struct {
 //====================== Collision Detector Interface ============================
 //================================================================================
 partition* alloc_partition(int max_particles);
-void free_partition(partition* p)
+void free_partition(partition* p);
 int add_particle(partition* part, particle_t* p);
 void remove_particle(partition* p, int id);
 void set_ghost(partition* p, int id, int is_ghost);
@@ -93,20 +104,8 @@ const int NONE = -1;
 
 // moved from common.cpp
 #define cutoff  0.01
-
-//
-// particle data structure
-//
-typedef struct 
-{
-  double x;
-  double y;
-  double vx;
-  double vy;
-  double ax;
-  double ay;
-  int globalID;
-} particle_t;
+#define mass    0.01
+#define min_r   (cutoff/100)
 
 //
 //  timing routines
