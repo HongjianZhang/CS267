@@ -355,23 +355,3 @@ void update_particles(partition* p){
     if(p->is_id_active[i])
       move(p->particles[i]);
 }
-
-void run_simulation(particle_t* ps, int n, FILE* fsave){
-  //Create partition and set active
-  partition* p1 = alloc_partition(n);
-  for(int i=0; i<n; i++)
-    int id = add_particle(p1, &ps[i]);
-
-  //For each step
-  for(int step = 0; step < NSTEPS; step++ ){
-    update_particles(p1);
-
-    if(fsave && (step%SAVEFREQ) == 0){      
-      for(int i=0; i<p1->num_particles; i++)
-        if(p1->is_id_active[i])
-          ps[p1->particles[i].globalID] = p1->particles[i];
-    
-      save(fsave, n, ps );
-    }
-  }
-}
