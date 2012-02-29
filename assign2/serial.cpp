@@ -4,9 +4,10 @@
 #include <math.h>
 #include "common.h"
 
-//
-//  benchmarking program
-//
+//================================================================================
+//==================== Main Driver ===============================================
+//================================================================================
+
 int main( int argc, char **argv )
 {    
     if( find_option( argc, argv, "-h" ) >= 0 )
@@ -31,30 +32,7 @@ int main( int argc, char **argv )
     //  simulate a number of time steps
     //
     double simulation_time = read_timer( );
-    for( int step = 0; step < NSTEPS; step++ )
-    {
-        //
-        //  compute forces
-        //
-        for( int i = 0; i < n; i++ )
-        {
-            particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-                apply_force( particles[i], particles[j] );
-        }
-        
-        //
-        //  move particles
-        //
-        for( int i = 0; i < n; i++ ) 
-            move( particles[i] );
-        
-        //
-        //  save if necessary
-        //
-        if( fsave && (step%SAVEFREQ) == 0 )
-            save( fsave, n, particles );
-    }
+    run_simulation(particles, n, fsave);
     simulation_time = read_timer( ) - simulation_time;
     
     printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
