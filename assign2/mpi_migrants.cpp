@@ -64,7 +64,6 @@ void free_emigrant_buf()
 //
 void prepare_emigrants(partition_t* part, int* local_ids, int* local_n, double left_x, double right_x, double bottom_y, double top_y, int* neighbors)
 {
-    int num_particles_removed = 0;
     int exit_dir;
     particle_t particle;
 
@@ -133,12 +132,12 @@ void prepare_emigrants(partition_t* part, int* local_ids, int* local_n, double l
             emigrant_buf[exit_dir][emigrant_cnt[exit_dir]] = particle;
             emigrant_cnt[exit_dir] += 1;
             remove_particle(part, local_ids[i]);
-            num_particles_removed++;
+
+            local_ids[i] = local_ids[(*local_n)-1];
+            (*local_n) -= 1;
+            --i; //Want to make sure we check the value just swapped in as well
         }
     }
-
-    // Update the count of active particles on this processor
-    (*local_n) -= num_particles_removed;
 }
 
 

@@ -114,12 +114,13 @@ int main( int argc, char **argv )
 
 	particle_t* particles = (particle_t*) malloc(n * sizeof(particle_t));
 	
-    if( rank == 0 )
-        init_particles( n, particles);
+	if( rank == 0 )
+		init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
 	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
-	
+
+	printf("R=%d, total: %d, 0,1=%d,%d \n", rank, nlocal, local_ids[0], local_ids[1]);
     //
     //  simulate a number of time steps
     //
@@ -132,8 +133,7 @@ int main( int argc, char **argv )
 		prepare_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_ghost_packets(neighbors);
 		receive_ghost_packets(part, ghost_ids, &nghost, neighbors, num_neighbors, n);
-		
-        //
+	
         //  Compute all forces
         //
 		update_particles(part);
@@ -240,6 +240,7 @@ int select_particles(partition_t* part, int n, particle_t* particles, int* local
 			current_particle++;
 		}
 	}
+	printf("grabbed %d\n", current_particle);
 	
 	// Make sure we know how many local particles we have.
 	return current_particle;

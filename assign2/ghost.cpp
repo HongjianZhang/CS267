@@ -44,7 +44,7 @@ void prepare_ghost_packets(partition_t* part, int* local_ids, int nlocal, double
 	
 	for(int i = 0; i < nlocal; ++i)
 	{
-		particle_t particle = *get_particle(part, i);
+		particle_t particle = *get_particle(part, local_ids[i]);
 		
 		if(particle.x <= (left_x + GHOST_LENGTH)) // check if in W, SW, or NW ghost zone by x
 		{
@@ -158,6 +158,8 @@ void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int*
 		ghost_ids[i] = add_particle(part, received_ghosts[i]);
 		set_ghost(part, ghost_ids[i], GHOST_TRUE);
 	}
+
+    *nghosts = total_received;
 
     // Make sure that all previous ghost messages have been sent, as we need to reuse the buffers
     MPI_Waitall(num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
