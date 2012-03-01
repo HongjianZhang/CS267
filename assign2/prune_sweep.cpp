@@ -170,16 +170,13 @@ void prune(partition_t* p){
 
     //Check whether ids are active
     int is_active = p->is_id_active[c->id1] && p->is_id_active[c->id2];
-
-    //Check whether both ids are ghosts
-    int is_ghost = p->is_ghost[c->id1] && p->is_ghost[c->id2];
     
     //Check whether collision is active
     int idx = triangle_idx(p->max_particles, c->id1, c->id2);
     char num_intersections = p->collision_table[idx];
 
     //If the collision is active then copy to dest
-    if(is_active && !is_ghost && num_intersections == 2){
+    if(is_active && num_intersections == 2){
       if(dest != c)
         *dest = *c;
       dest++;
@@ -348,11 +345,12 @@ void update_particles(partition_t* p){
   //Accumulate acceleration
   for(int i=0; i<p->num_active_collisions; i++){
     collision c = p->active_collisions[i];
-    apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
+    if(!p->is_ghost[c.id1] || !p->is_ghost[c.id2])
+      apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
   }
 
   //Move Particles
   for(int i=0; i<p->num_particles; i++)
-    if(p->is_id_active[i])
+    if(p->is_id_active[i] && !(p->is_ghost[i]))
       move(p->particles[i]);
 }
