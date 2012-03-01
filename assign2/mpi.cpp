@@ -120,7 +120,6 @@ int main( int argc, char **argv )
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
 	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
 
-	printf("R=%d, total: %d, 0,1=%d,%d \n", rank, nlocal, local_ids[0], local_ids[1]);
     //
     //  simulate a number of time steps
     //
@@ -240,7 +239,6 @@ int select_particles(partition_t* part, int n, particle_t* particles, int* local
 			current_particle++;
 		}
 	}
-	printf("grabbed %d\n", current_particle);
 	
 	// Make sure we know how many local particles we have.
 	return current_particle;
