@@ -61,6 +61,7 @@ int add_particle(partition_t* part, particle_t p){
   part->num_used_ids++;
   //Set active
   part->is_id_active[id] = 1;
+  part->is_ghost[id] = 0;
   //Copy data
   part->particles[id] = p;
 
@@ -126,7 +127,7 @@ void update_particles(partition_t* p){
 	  {
         if(p->is_id_active[j])
 		{
-	      apply_force(particles[i],particles[j]);
+	      apply_force(p->particles[i],p->particles[j]);
 		}
 	  }
     }

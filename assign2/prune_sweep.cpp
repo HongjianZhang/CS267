@@ -235,6 +235,7 @@ int add_particle(partition_t* part, particle_t p){
   part->num_used_ids++;
   //Set active
   part->is_id_active[id] = 1;
+  part->is_ghost[id] = 0;
   //Copy data
   part->particles[id] = p;
 

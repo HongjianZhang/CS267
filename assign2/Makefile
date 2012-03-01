@@ -37,6 +37,8 @@ ghost.o: ghost.cpp common.h mpi_particles.h
 	$(MPCC) -c $(CFLAGS) ghost.cpp
 common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
+dumb.o: dumb.cpp common.h
+	$(CC) -c $(CFLAGS) dumb.cpp
 
 clean:
 	rm -f *.o $(TARGETS)
