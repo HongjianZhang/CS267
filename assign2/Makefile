@@ -13,7 +13,7 @@ TARGETS = serial pthreads openmp mpi
 all:	$(TARGETS)
 
 serial: serial.o prune_sweep.o common.o
-	$(CC) -o $@ $(LIBS) serial.o common.o
+	$(CC) -o $@ $(LIBS) serial.o common.o prune_sweep.o
 pthreads: pthreads.o common.o
 	$(CC) -o $@ $(LIBS) -lpthread pthreads.o common.o
 openmp: openmp.o common.o
