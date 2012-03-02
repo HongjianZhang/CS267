@@ -114,11 +114,11 @@ int main( int argc, char **argv )
 		{
 			for(int i = 0; i < microblocks[mb].num_particles; ++i)
 			{
-				particle_t* migrant = microblocks[mb].particles + i);
+				particle_t* migrant = microblocks[mb].particles[i];
 				if(migrant->x < microblocks[mb].left_x   ||\
 				   migrant->x > microblocks[mb].right_x  ||\
 				   migrant->y < microblocks[mb].bottom_y ||\
-				   migrant->y < microblocks[mb].top_y)
+				   migrant->y > microblocks[mb].top_y)
 				{
 					int mb_x, mb_y;
 					mb_x = migrant->x * mfactor_x;
@@ -129,6 +129,7 @@ int main( int argc, char **argv )
 				   
 					mb_rm_particle(microblocks + mb, i);
 					mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, migrant);
+					--i;
 				}
 			}
 		}
@@ -141,7 +142,7 @@ int main( int argc, char **argv )
 	}
 	simulation_time = read_timer( ) - simulation_time;
     
-    printf("n = %d,\tsimulation time = %g seconds\n", n, simulation_time );*/
+    printf("n = %d,\tsimulation time = %g seconds\n", n, simulation_time );
     
     free( particles );
     if( fsave )
@@ -182,7 +183,7 @@ void mb_add_particle(microblock* microblock, particle_t* particle_addr)
 void mb_rm_particle(microblock* microblock, int pos)
 {
 	// Remove by overwriting target with last array value, then decrementing
-	microblock->particles[pos] = microblock->particles[microblock->num_particles];
+	microblock->particles[pos] = microblock->particles[microblock->num_particles-1];
 	microblock->num_particles -= 1;
 }
 

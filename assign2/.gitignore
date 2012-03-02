@@ -2,5 +2,6 @@
 *.stdout
 mpi
 serial
+openmp
 *.txt
 job-hopper-test*
