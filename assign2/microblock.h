@@ -1,11 +1,11 @@
-#include omp.h
+#include <omp.h>
 
-typedef struct microblock microblock
+typedef struct microblock microblock;
 
 struct microblock
 {
 	// Particles
-	particle_t* particles;
+	particle_t** particles;
 	int num_particles;
 	int max_particles;
 	

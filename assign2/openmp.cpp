@@ -49,7 +49,7 @@ int main( int argc, char **argv )
 	
 	// Initialize microblocks
 	microblock* microblocks = (microblock*) malloc(num_micro_x*num_micro_y * sizeof(microblock));
-	setup_microblocks(microblocks, sim_size, sim_size, num_micro_x, num_micro_y, len_micro_x, len_micro_y);
+	setup_microblocks(microblocks, num_micro_x, num_micro_y, sim_size, sim_size);
 
 	// Distribute particles to microblocks
 	distribute_particles(microblocks, num_micro_x, num_micro_y, mfactor_x, mfactor_y, particles, n);
@@ -57,16 +57,6 @@ int main( int argc, char **argv )
     //
     //  simulate a number of time steps
     //
-	int total = 0;
-	for(int x = 0; x < num_micro_x; ++x)
-	{
-		for(int y = 0; y < num_micro_y; ++y)
-		{
-			printf("(X,Y)=(%d,%d): %d\n", x, y, microblocks[y*num_micro_x + x].num_particles);
-			total += microblocks[y*num_micro_x + x].num_particles;
-		}
-	}
-	printf("total: %d", total);
 	
 /*    double simulation_time = read_timer( );
 
@@ -108,7 +98,7 @@ int main( int argc, char **argv )
 void mb_expand_particle(microblock* microblock, int new_max)
 {
 	// Create the new particle queue and copy old addresses into it
-	particle_t** new_storage = (particle_t*) malloc(new_max * sizeof((particle_t*)));
+	particle_t** new_storage = (particle_t**) malloc(new_max * sizeof(particle_t*));
 	for(int i = 0; i < microblock->num_particles; ++i)
 	{
 		new_storage[i] = microblock->particles[i];
@@ -131,13 +121,13 @@ void mb_add_particle(microblock* microblock, particle_t* particle_addr)
 	}
 	
 	// Add the new particle
-	microblock->particles[num_particles] = particle_addr;
+	microblock->particles[microblock->num_particles] = particle_addr;
 	microblock->num_particles += 1;
 }
 void mb_rm_particle(microblock* microblock, int pos)
 {
 	// Remove by overwriting target with last array value, then decrementing
-	microblock->particles[pos] = microblock->num_particles;
+	microblock->particles[pos] = microblock->particles[microblock->num_particles];
 	microblock->num_particles -= 1;
 }
 
@@ -147,7 +137,7 @@ void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y
 	{
 		for(int y = 0; y < num_micro_y; ++y)
 		{
-			microblock* current = &microblocks[y*num_micro_x + x];
+			microblock* current = microblocks+ y*num_micro_x + x;
 			current->particles = (particle_t**) malloc(default_mbuf_depth * sizeof(particle_t*));
 			current->max_particles = default_mbuf_depth;
 			current->num_particles = 0;
