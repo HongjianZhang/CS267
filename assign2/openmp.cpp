@@ -58,33 +58,88 @@ int main( int argc, char **argv )
     //  simulate a number of time steps
     //
 	
-/*    double simulation_time = read_timer( );
+	double simulation_time = read_timer( );
 
-    for( int step = 0; step < 1000; step++ )
-    {
-        //
-        //  compute all forces
-        //
-        for( int i = 0; i < n; i++ )
-        {
-            particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-                apply_force( particles[i], particles[j] );
-        }
-        
-        //
-        //  move particles
-        //
-        for( int i = 0; i < n; i++ ) 
-            move( particles[i] );
-        
-        //
-        //  save if necessary
-        //
-        if( fsave && (step%SAVEFREQ) == 0 )
-            save( fsave, n, particles );
-    }
-    simulation_time = read_timer( ) - simulation_time;
+	for( int step = 0; step < NSTEPS; step++ )
+	{
+		//
+		//  compute all forces
+		//
+		// Go through each particle in each microblock
+		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
+		{
+			for(int i = 0; i < microblocks[mb].num_particles; ++i)
+			{
+				// Reset forces for current particle
+				microblocks[mb].particles[i]->ax = 0; microblocks[mb].particles[i]->ay = 0;
+				
+				// Collide with particles in my block
+				for(int j = 0; j < microblocks[mb].num_particles; ++j)
+				{
+					if(i != j) // do not collide with self
+					{
+						apply_force(*(microblocks[mb].particles[i]), *(microblocks[mb].particles[j]));
+					}
+				}
+				
+				// Collide with particles in neighboring blocks
+				for(int n = 0; n < 8; ++n)
+				{
+					int n_id = microblocks[mb].neighbors[n];
+					if(n_id != NONE) // Make sure I have a neighbor!
+					{
+						for(int j = 0; j < microblocks[n_id].num_particles; ++j)
+						{
+							apply_force(*(microblocks[mb].particles[i]), *(microblocks[n_id].particles[j]));
+						}
+					}
+				}
+			}
+		}
+
+		//
+		//  move particles
+		//
+		// Go through each particle in each microblock
+		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
+		{
+			for(int i = 0; i < microblocks[mb].num_particles; ++i)
+			{
+				move(*(microblocks[mb].particles[i]));
+			}
+		}
+		
+		//  migrate particles between microblocks as necessary
+		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
+		{
+			for(int i = 0; i < microblocks[mb].num_particles; ++i)
+			{
+				particle_t* migrant = microblocks[mb].particles + i);
+				if(migrant->x < microblocks[mb].left_x   ||\
+				   migrant->x > microblocks[mb].right_x  ||\
+				   migrant->y < microblocks[mb].bottom_y ||\
+				   migrant->y < microblocks[mb].top_y)
+				{
+					int mb_x, mb_y;
+					mb_x = migrant->x * mfactor_x;
+					mb_y = migrant->y * mfactor_y;
+
+					mb_x = min(max(0,mb_x), num_micro_x);
+					mb_y = min(max(0,mb_y), num_micro_y);
+				   
+					mb_rm_particle(microblocks + mb, i);
+					mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, migrant);
+				}
+			}
+		}
+
+		//
+		//  save if necessary
+		//
+		if( fsave && (step%SAVEFREQ) == 0 )
+			save( fsave, n, particles );
+	}
+	simulation_time = read_timer( ) - simulation_time;
     
     printf("n = %d,\tsimulation time = %g seconds\n", n, simulation_time );*/
     
@@ -172,6 +227,6 @@ void distribute_particles(microblock* microblocks, int num_micro_x, int num_micr
 		mb_x = min(max(0,mb_x), num_micro_x);
 		mb_y = min(max(0,mb_y), num_micro_y);
 		
-		mb_add_particle(&microblocks[mb_y*num_micro_x + mb_x], &particles[i]);
+		mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, particles + i);
 	}
 }
