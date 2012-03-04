@@ -85,12 +85,11 @@ int main( int argc, char **argv )
 				// Collide with particles in neighboring blocks
 				for(int n = 0; n < 8; ++n)
 				{
-					int n_id = microblocks[mb].neighbors[n];
-					if(n_id != NONE) // Make sure I have a neighbor!
+					if(microblocks[mb].neighbors[n] != NO_MB) // Make sure I have a neighbor!
 					{
-						for(int j = 0; j < microblocks[n_id].num_particles; ++j)
+						for(int j = 0; j < microblocks[mb].neighbors[n]->num_particles; ++j)
 						{
-							apply_force(*(microblocks[mb].particles[i]), *(microblocks[n_id].particles[j]));
+							apply_force(*(microblocks[mb].particles[i]), *(microblocks[mb].neighbors[n]->particles[j]));
 						}
 					}
 				}
@@ -198,16 +197,16 @@ void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y
 			current->max_particles = default_mbuf_depth;
 			current->num_particles = 0;
 			
-			current->neighbors[p_sw] = ((x != 0)             && (y != 0)            ) ? ((y-1)*num_micro_x + (x-1)) : (NONE);
-			current->neighbors[p_s ] = (                        (y != 0)            ) ? ((y-1)*num_micro_x + (x  )) : (NONE);
-			current->neighbors[p_se] = ((x != num_micro_x-1) && (y != 0)            ) ? ((y-1)*num_micro_x + (x+1)) : (NONE);
+			current->neighbors[p_sw] = ((x != 0)             && (y != 0)            ) ? (&microblock[(y-1)*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_s ] = (                        (y != 0)            ) ? (&microblock[(y-1)*num_micro_x + (x  )]) : (NO_MB);
+			current->neighbors[p_se] = ((x != num_micro_x-1) && (y != 0)            ) ? (&microblock[(y-1)*num_micro_x + (x+1)]) : (NO_MB);
 			
-			current->neighbors[p_w ] = ((x != 0)                                    ) ? ((y  )*num_micro_x + (x-1)) : (NONE);
-			current->neighbors[p_e ] = ((x != num_micro_x-1)                        ) ? ((y  )*num_micro_x + (x+1)) : (NONE);
+			current->neighbors[p_w ] = ((x != 0)                                    ) ? (&microblock[(y  )*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_e ] = ((x != num_micro_x-1)                        ) ? (&microblock[(y  )*num_micro_x + (x+1)]) : (NO_MB);
 			
-			current->neighbors[p_nw] = ((x != 0)             && (y != num_micro_y-1)) ? ((y+1)*num_micro_x + (x-1)) : (NONE);
-			current->neighbors[p_n ] = (                        (y != num_micro_y-1)) ? ((y+1)*num_micro_x + (x  )) : (NONE);
-			current->neighbors[p_ne] = ((x != num_micro_x-1) && (y != num_micro_y-1)) ? ((y+1)*num_micro_x + (x+1)) : (NONE);
+			current->neighbors[p_nw] = ((x != 0)             && (y != num_micro_y-1)) ? (&microblock[(y+1)*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_n ] = (                        (y != num_micro_y-1)) ? (&microblock[(y+1)*num_micro_x + (x  )]) : (NO_MB);
+			current->neighbors[p_ne] = ((x != num_micro_x-1) && (y != num_micro_y-1)) ? (&microblock[(y+1)*num_micro_x + (x+1)]) : (NO_MB);
 			
 			current->left_x   = (x==0)             ? (0)     : ((sim_x/num_micro_x)*(x  ));
 			current->right_x  = (x==num_micro_x-1) ? (sim_x) : ((sim_x/num_micro_x)*(x+1));
