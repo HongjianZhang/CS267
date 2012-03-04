@@ -60,12 +60,14 @@ int main( int argc, char **argv )
 	
 	double simulation_time = read_timer( );
 
+    #pragma omp parallel
 	for( int step = 0; step < NSTEPS; step++ )
 	{
 		//
 		//  compute all forces
 		//
 		// Go through each particle in each microblock
+        #pragma omp for
 		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
 		{
 			for(int i = 0; i < microblocks[mb].num_particles; ++i)
@@ -100,6 +102,7 @@ int main( int argc, char **argv )
 		//  move particles
 		//
 		// Go through each particle in each microblock
+        #pragma omp for
 		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
 		{
 			for(int i = 0; i < microblocks[mb].num_particles; ++i)
@@ -109,6 +112,7 @@ int main( int argc, char **argv )
 		}
 		
 		//  migrate particles between microblocks as necessary
+        #pragma omp master
 		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
 		{
 			for(int i = 0; i < microblocks[mb].num_particles; ++i)
@@ -136,6 +140,7 @@ int main( int argc, char **argv )
 		//
 		//  save if necessary
 		//
+        #pragma omp master
 		if( fsave && (step%SAVEFREQ) == 0 )
 			save( fsave, n, particles );
 	}
