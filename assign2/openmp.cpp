@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <omp.h>
 #include "common.h"
 #include "microblock.h"
 
@@ -63,6 +64,7 @@ int main( int argc, char **argv )
     #pragma omp parallel
 	for( int step = 0; step < NSTEPS; step++ )
 	{
+	#pragma omp barrier
 		//
 		//  compute all forces
 		//
@@ -112,7 +114,7 @@ int main( int argc, char **argv )
 		}
 		
 		//  migrate particles between microblocks as necessary
-        #pragma omp master
+        #pragma omp for
 		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
 		{
 			for(int i = 0; i < microblocks[mb].num_particles; ++i)
@@ -174,6 +176,8 @@ void mb_expand_particle(microblock* microblock, int new_max)
 
 void mb_add_particle(microblock* microblock, particle_t* particle_addr)
 {
+	omp_set_lock(&(microblock->lock));
+
 	// Expand queue if needed
 	if(microblock->num_particles == microblock->max_particles)
 	{
@@ -183,12 +187,18 @@ void mb_add_particle(microblock* microblock, particle_t* particle_addr)
 	// Add the new particle
 	microblock->particles[microblock->num_particles] = particle_addr;
 	microblock->num_particles += 1;
+
+	omp_unset_lock(&(microblock->lock));
 }
 void mb_rm_particle(microblock* microblock, int pos)
 {
+	omp_set_lock(&(microblock->lock));
+	
 	// Remove by overwriting target with last array value, then decrementing
 	microblock->particles[pos] = microblock->particles[microblock->num_particles-1];
 	microblock->num_particles -= 1;
+	
+	omp_unset_lock(&(microblock->lock));
 }
 
 void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y, double sim_x, double sim_y)
@@ -217,6 +227,8 @@ void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y
 			current->right_x  = (x==num_micro_x-1) ? (sim_x) : ((sim_x/num_micro_x)*(x+1));
 			current->bottom_y = (y==0)             ? (0)     : ((sim_y/num_micro_y)*(y  ));
 			current->top_y    = (y==num_micro_y-1) ? (sim_y) : ((sim_y/num_micro_y)*(y+1));
+
+			omp_init_lock(&(current->lock));			
 		}
 	}
 }
