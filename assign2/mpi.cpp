@@ -8,7 +8,7 @@
 #include "mpi_particles.h"
 
 MPI_Datatype PARTICLE;
-
+int rank;
 //
 //  benchmarking program
 //
@@ -32,7 +32,7 @@ int main( int argc, char **argv )
     //
     //  set up MPI
     //
-    int n_proc, rank;
+    int n_proc; //, rank;
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
@@ -120,6 +120,9 @@ int main( int argc, char **argv )
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
 	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
 
+    // Determine the cycle 0 ghosts
+    prepare_initial_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
+
     //
     //  simulate a number of time steps
     //
@@ -129,20 +132,19 @@ int main( int argc, char **argv )
 		//
 		//  Handle ghosting
 		//
-		prepare_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_ghost_packets(neighbors);
 		receive_ghost_packets(part, ghost_ids, &nghost, neighbors, num_neighbors, n);
 	
         //  Compute all forces
         //
-		update_particles(part);
+        update_particles_mpi(part, left_x, right_x, bottom_y, top_y);
 		
 		//
 		//  Handle migration
 		//
 		prepare_emigrants(part, local_ids, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
 		send_emigrants(neighbors);
-		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n);
+		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n, left_x, right_x, bottom_y, top_y);
 		
 		//
         //  save current step if necessary
@@ -243,3 +245,43 @@ int select_particles(partition_t* part, int n, particle_t* particles, int* local
 	// Make sure we know how many local particles we have.
 	return current_particle;
 }
+
+
+//
+// Modified version of update_particle from prune_sweep.cpp
+//
+void update_particles_mpi(partition_t* p, double left_x, double right_x, double bottom_y, double top_y) {
+
+  // Local variables
+  double oldx, oldy;
+
+  //Calculate active collisions
+  sweep_and_prune(p);
+
+  //Reset acceleration
+  for(int i=0; i<p->num_particles; i++)
+    if(p->is_id_active[i])
+      p->particles[i].ax = p->particles[i].ay = 0;
+
+  //Accumulate acceleration
+  for(int i=0; i<p->num_active_collisions; i++){
+    collision c = p->active_collisions[i];
+    if(p->is_id_active[c.id1] && p->is_id_active[c.id2])
+       if(!p->is_ghost[c.id1] || !p->is_ghost[c.id2])
+          apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
+  }
+
+  //Move Particles
+  for(int i=0; i<p->num_particles; i++)
+  {
+    if(p->is_id_active[i] && !(p->is_ghost[i]))
+    {
+      oldx = p->particles[i].x;
+      oldy = p->particles[i].y;
+      move(p->particles[i]);
+
+      update_ghost(p->particles[i], oldx, oldy, left_x, right_x, bottom_y, top_y);
+    }
+  }
+}
+

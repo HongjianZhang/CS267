@@ -73,6 +73,9 @@ particle_t* get_particle(partition_t* p, int id);
 void update_particles(partition_t* p);
 void sweep_and_prune(partition_t* p);
 
+void update_particles_mpi(partition_t* p, double left_x, double right_x, double bottom_y, double top_y);
+
+
 //
 //  saving parameters
 //

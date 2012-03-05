@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
+#include "mpi_particles.h"
 
 //================================================================================
 //=========================== Global Constants ===================================
@@ -327,7 +328,8 @@ void apply_pairwise_force(particle_t* p1, particle_t* p2) {
   }
 }
 
-void update_particles(partition_t* p){  
+void update_particles(partition_t* p) {
+
   //Calculate active collisions
   sweep_and_prune(p);
 
@@ -346,6 +348,9 @@ void update_particles(partition_t* p){
 
   //Move Particles
   for(int i=0; i<p->num_particles; i++)
+  {
     if(p->is_id_active[i] && !(p->is_ghost[i]))
       move(p->particles[i]);
+  }
 }
+

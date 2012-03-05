@@ -171,7 +171,7 @@ void send_emigrants(int* neighbors)
 // 'local_n' is the number of valid particles on this processor, and is updated once all particles have been received.
 // 'buf_size' is in terms of number of particles, not bytes
 //
-void receive_immigrants(int* neighbors, int num_neighbors, partition_t* part, int* local_ids, int* local_n, int buf_size)
+void receive_immigrants(int* neighbors, int num_neighbors, partition_t* part, int* local_ids, int* local_n, int buf_size, double left_x, double right_x, double bottom_y, double top_y)
 {
     MPI_Status status;
     int num_particles_rcvd = 0;
@@ -196,6 +196,11 @@ void receive_immigrants(int* neighbors, int num_neighbors, partition_t* part, in
             local_ids[*local_n] = new_id;
             *(local_n) += 1;
         }
+
+        // Finally, check if these immigrants are ghost particles. If so, add them to
+        // the new_ghost list
+        prepare_initial_ghost_packets(part, &(local_ids[(*local_n) - num_particles_rcvd]), num_particles_rcvd,
+                                        left_x, right_x, bottom_y, top_y, neighbors);
     }
 
     // Make sure that all previous emigrant messages have been sent, as we need to reuse the buffers
