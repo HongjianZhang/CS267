@@ -261,6 +261,8 @@ void* thread_entry(void* arg){
     update_particles(r->partition);
     barrier_wait(&end_barrier);
   }
+
+  return 0;
 }
 
 double run_simulation(particle_t* ps, int n, int rows, int cols, FILE* fsave){

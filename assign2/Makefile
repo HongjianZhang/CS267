@@ -14,8 +14,8 @@ all:	$(TARGETS)
 
 serial: serial.o prune_sweep.o common.o
 	$(CC) -o $@ $(LIBS) serial.o common.o prune_sweep.o
-pthreads: pthreads.o common.o
-	$(CC) -o $@ $(LIBS) -lpthread pthreads.o common.o
+pthreads: pthreads.o prune_sweep.o common.o
+	$(CC) -o $@ $(LIBS) -lpthread pthreads.o prune_sweep.o common.o
 openmp: openmp.o common.o
 	$(CC) -o $@ $(LIBS) $(OPENMP) openmp.o common.o
 mpi: mpi.o common.o mpi_migrants.o ghost.o prune_sweep.o
