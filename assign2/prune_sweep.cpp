@@ -8,9 +8,6 @@
 //=========================== Global Constants ===================================
 //================================================================================
 
-//Particle Radius
-double radius = cutoff/2;
-
 //Token types
 const int R = 1;
 const int L = -1;
@@ -101,7 +98,7 @@ void register_active_collision(partition_t* p, int id1, int id2){
 }
 
 //Mark id1 and id2 as intersecting
-void mark_intersection(partition_t* p, int id1, int id2){
+void mark_intersection(partition_t* p, int id1, int id2){  
   int min_id = min(id1, id2);
   int max_id = max(id1, id2);
   
@@ -114,11 +111,11 @@ void mark_intersection(partition_t* p, int id1, int id2){
 }
 
 //Unmark id1 and id2 as intersecting
-void unmark_intersection(partition_t* p, int id1, int id2){
+void unmark_intersection(partition_t* p, int id1, int id2){  
   int min_id = min(id1, id2);
   int max_id = max(id1, id2);
   
-  int idx = triangle_idx(p->max_particles, min_id, max_id);
+  int idx = triangle_idx(p->max_particles, min_id, max_id);  
   p->collision_table[idx]--;
 }
 
@@ -220,7 +217,7 @@ void sweep_and_prune(partition_t* p){
 int add_particle(partition_t* part, particle_t p){
   //Safety check
   if(part->num_used_ids >= part->max_particles){
-    printf("Can not add another particle. Maximum number of particles reached.\n");
+    printf("Can not add another particle. Maximum (%d) number of particles reached.\n", part->max_particles);
     exit(-1);
   }
   
@@ -269,7 +266,7 @@ int add_particle(partition_t* part, particle_t p){
   return id;
 }
 
-void ensure_active(partition_t* p, int id){
+inline void ensure_active(partition_t* p, int id){
   if(!p->is_id_active[id]){
     printf("Particle %d is not active.\n", id);
     exit(-1);
@@ -292,7 +289,7 @@ void set_ghost(partition_t* p, int id, int is_ghost){
 }
 
 void set_state(partition_t* p, int id, double x, double y, double vx, double vy){
-  ensure_active(p, id);
+  ensure_active(p, id);  
   p->particles[id].x = x;
   p->particles[id].y = y;
   p->particles[id].vx = vx;
@@ -330,7 +327,7 @@ void apply_pairwise_force(particle_t* p1, particle_t* p2) {
   }
 }
 
-void update_particles(partition_t* p){
+void update_particles(partition_t* p){  
   //Calculate active collisions
   sweep_and_prune(p);
 
@@ -343,8 +340,8 @@ void update_particles(partition_t* p){
   for(int i=0; i<p->num_active_collisions; i++){
     collision c = p->active_collisions[i];
     if(p->is_id_active[c.id1] && p->is_id_active[c.id2])
-       if(!p->is_ghost[c.id1] || !p->is_ghost[c.id2])
-          apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
+      if(!p->is_ghost[c.id1] || !p->is_ghost[c.id2])
+        apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
   }
 
   //Move Particles

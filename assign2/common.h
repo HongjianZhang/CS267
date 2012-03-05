@@ -71,7 +71,7 @@ void set_ghost(partition_t* p, int id, int is_ghost);
 void set_state(partition_t* p, int id, double x, double y, double vx, double vy);
 particle_t* get_particle(partition_t* p, int id);
 void update_particles(partition_t* p);
-
+void sweep_and_prune(partition_t* p);
 
 //
 //  saving parameters
@@ -106,6 +106,9 @@ const int NONE = -1;
 #define cutoff  0.01
 #define mass    0.01
 #define min_r   (cutoff/100)
+
+//Particle Radius
+const double radius = cutoff/2;
 
 //
 //  timing routines

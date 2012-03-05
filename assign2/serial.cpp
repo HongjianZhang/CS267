@@ -8,21 +8,22 @@
 //==================== Main Driver ===============================================
 //================================================================================
 double run_simulation(particle_t* ps, int n, FILE* fsave){
-
   //Create partition and set active
   partition_t* p1 = alloc_partition(n);
   for(int i=0; i<n; i++)
     int id = add_particle(p1, ps[i]);
 
-  double simulation_time = read_timer( );
+  //Initialize Lists
+  sweep_and_prune(p1);
+
+  //Initialize Timer
+  double simulation_time = read_timer();
 
   //For each step
-  for(int step = 0; step < NSTEPS; step++ )
-  {
+  for(int step = 0; step < NSTEPS; step++ ){
     update_particles(p1);
 
-    if(fsave && (step%SAVEFREQ) == 0)
-    {      
+    if(fsave && (step%SAVEFREQ) == 0){      
       for(int i=0; i<p1->num_particles; i++)
         if(p1->is_id_active[i])
           ps[p1->particles[i].globalID] = p1->particles[i];
@@ -30,8 +31,9 @@ double run_simulation(particle_t* ps, int n, FILE* fsave){
       save(fsave, n, ps );
     }
   }
-  
-  simulation_time = read_timer( ) - simulation_time;
+
+  //Calculate Time Elapsed
+  simulation_time = read_timer() - simulation_time;
   return simulation_time;
 }
 
