@@ -263,7 +263,7 @@ void* thread_entry(void* arg){
   }
 }
 
-void run_simulation(particle_t* ps, int n, int rows, int cols, FILE* fsave){
+double run_simulation(particle_t* ps, int n, int rows, int cols, FILE* fsave){
   //Regions
   int num_regions = rows*cols;
   region* regions[num_regions];
