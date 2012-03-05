@@ -4,10 +4,14 @@
 #include <mpi.h>
 
 #define EMIGRANT_TAG    1
-#define GHOST_TAG       2
+#define NEW_GHOST_TAG   2
+#define MOD_GHOST_TAG   3
+#define DEL_GHOST_TAG   4
 
 #define GHOST_TRUE	1
 #define GHOST_FALSE	0
+
+#include "common.h"
 
 extern MPI_Datatype PARTICLE;
 
@@ -36,13 +40,22 @@ bool compare_particles(particle_t left, particle_t right); // check if left_id <
 //
 void prepare_emigrants(partition_t* part, int* local_ids, int* local_n, double left_x, double right_x, double bottom_y, double top_y, int* neighbors);
 void send_emigrants(int* neighbors);
-void receive_immigrants(int* neighbors, int num_neighbors, partition_t* part, int* local_ids, int* local_n, int buf_size);
+void receive_immigrants(int* neighbors, int num_neighbors, partition_t* part, int* local_ids, int* local_n, int buf_size, double left_x, double right_x, double bottom_y, double top_y);
 
 //
 // Functions to send/receive ghost particles
 //
-void prepare_ghost_packets(partition_t* part, int* local_ids, int nlocal, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[]);
+void prepare_initial_ghost_packets(partition_t* part, int* local_ids, int nlocal, double left_x, double right_x, double bottom_y, double top_y, int neighbors[]);
+void update_ghost(particle_t &particle, double oldx, double oldy, double left_x, double right_x, double bottom_y, double top_y);
 void send_ghost_packets(int neighbors[]);
 void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int* neighbors, int num_neighbors, int buf_size);
+
+//
+// Functions exported from prune_sweep.cpp for the modified update_particles function
+//
+void apply_pairwise_force(particle_t* p1, particle_t* p2);
+void sweep_and_prune(partition_t* p);
+
+
 
 #endif

@@ -70,8 +70,9 @@ void remove_particle(partition_t* p, int id);
 void set_ghost(partition_t* p, int id, int is_ghost);
 void set_state(partition_t* p, int id, double x, double y, double vx, double vy);
 particle_t* get_particle(partition_t* p, int id);
-void update_particles(partition_t* p);
 
+void update_particles(partition_t* p);
+void update_particles_mpi(partition_t* p, double left_x, double right_x, double bottom_y, double top_y);
 
 //
 //  saving parameters
