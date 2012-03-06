@@ -5,3 +5,4 @@ serial
 openmp
 *.txt
 job-hopper-test*
+*+*
