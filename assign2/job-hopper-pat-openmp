@@ -1,0 +1,36 @@
+#PBS -V
+#PBS -l mppwidth=1
+#PBS -l mppnppn=1
+#PBS -l mppdepth=24
+#PBS -S /bin/bash
+#PBS -l walltime=0:10:00
+#PBS -o openmp24.stdout
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+export PAT_RT_HWPC=1
+
+export OMP_NUM_THREADS=1
+aprun -d 1 -n 1 -N 1 ./openmp+pat -n 500
+aprun -d 1 -n 1 -N 1 ./openmp+pat -n 10000
+aprun -d 1 -n 1 -N 1 ./openmp+pat -n 40000
+
+export OMP_NUM_THREADS=4
+aprun -d 4 -n 1 -N 1 ./openmp+pat -n 500
+aprun -d 4 -n 1 -N 1 ./openmp+pat -n 10000
+aprun -d 4 -n 1 -N 1 ./openmp+pat -n 40000
+
+export OMP_NUM_THREADS=8
+aprun -d 8 -n 1 -N 1 ./openmp+pat -n 500
+aprun -d 8 -n 1 -N 1 ./openmp+pat -n 10000
+aprun -d 8 -n 1 -N 1 ./openmp+pat -n 40000
+
+export OMP_NUM_THREADS=16
+aprun -d 16 -n 1 -N 1 ./openmp+pat -n 500
+aprun -d 16 -n 1 -N 1 ./openmp+pat -n 10000
+aprun -d 16 -n 1 -N 1 ./openmp+pat -n 40000
+
+export OMP_NUM_THREADS=24
+aprun -d 24 -n 1 -N 1 ./openmp+pat -n 500
+aprun -d 24 -n 1 -N 1 ./openmp+pat -n 10000
+aprun -d 24 -n 1 -N 1 ./openmp+pat -n 40000

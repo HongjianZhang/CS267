@@ -9,5 +9,42 @@
 
 cd $PBS_O_WORKDIR
 
+export OMP_NUM_THREADS=1
+aprun -d 1 -n 1 -N 1 ./openmp -n 500
+aprun -d 1 -n 1 -N 1 ./openmp -n 1000
+aprun -d 1 -n 1 -N 1 ./openmp -n 5000
+aprun -d 1 -n 1 -N 1 ./openmp -n 10000
+aprun -d 1 -n 1 -N 1 ./openmp -n 20000
+aprun -d 1 -n 1 -N 1 ./openmp -n 40000
+
+export OMP_NUM_THREADS=4
+aprun -d 4 -n 1 -N 1 ./openmp -n 500
+aprun -d 4 -n 1 -N 1 ./openmp -n 1000
+aprun -d 4 -n 1 -N 1 ./openmp -n 5000
+aprun -d 4 -n 1 -N 1 ./openmp -n 10000
+aprun -d 4 -n 1 -N 1 ./openmp -n 20000
+aprun -d 4 -n 1 -N 1 ./openmp -n 40000
+
+export OMP_NUM_THREADS=8
+aprun -d 8 -n 1 -N 1 ./openmp -n 500
+aprun -d 8 -n 1 -N 1 ./openmp -n 1000
+aprun -d 8 -n 1 -N 1 ./openmp -n 5000
+aprun -d 8 -n 1 -N 1 ./openmp -n 10000
+aprun -d 8 -n 1 -N 1 ./openmp -n 20000
+aprun -d 8 -n 1 -N 1 ./openmp -n 40000
+
+export OMP_NUM_THREADS=16
+aprun -d 16 -n 1 -N 1 ./openmp -n 500
+aprun -d 16 -n 1 -N 1 ./openmp -n 1000
+aprun -d 16 -n 1 -N 1 ./openmp -n 5000
+aprun -d 16 -n 1 -N 1 ./openmp -n 10000
+aprun -d 16 -n 1 -N 1 ./openmp -n 20000
+aprun -d 16 -n 1 -N 1 ./openmp -n 40000
+
 export OMP_NUM_THREADS=24
-aprun -d 24 -n 1 -N 1 ./openmp -n 2000 -o openmp.txt
+aprun -d 24 -n 1 -N 1 ./openmp -n 500
+aprun -d 24 -n 1 -N 1 ./openmp -n 1000
+aprun -d 24 -n 1 -N 1 ./openmp -n 5000
+aprun -d 24 -n 1 -N 1 ./openmp -n 10000
+aprun -d 24 -n 1 -N 1 ./openmp -n 20000
+aprun -d 24 -n 1 -N 1 ./openmp -n 40000
