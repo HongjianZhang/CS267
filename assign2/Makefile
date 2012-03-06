@@ -23,7 +23,7 @@ openmp: openmp.o common.o
 mpi: mpi.o common.o mpi_migrants.o ghost.o prune_sweep.o
 	$(MPCC) -o $@ $(LIBS) $(MPILIBS) mpi.o common.o mpi_migrants.o ghost.o prune_sweep.o
 
-openmp.o: openmp.cpp common.h
+openmp.o: openmp.cpp common.h microblock.h
 	$(CC) -c $(OPENMP) $(CFLAGS) openmp.cpp
 serial.o: serial.cpp common.h
 	$(CC) -c $(CFLAGS) serial.cpp
