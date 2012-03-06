@@ -6,8 +6,15 @@
 #include <algorithm>
 #include "common.h"
 #include "mpi_particles.h"
+#include "microblock.h"
 
 MPI_Datatype PARTICLE;
+
+void mb_add_particle(microblock* microblock, particle_t* particle_addr);
+void mb_expand_particle(microblock* microblock, int new_max);
+void mb_rm_particle(microblock* microblock, int pos);
+void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y, double left_x, double right_x, double bottom_y, double top_y);
+void distribute_particles(microblock* microblocks, int num_micro_x, int num_micro_y, double left_x, double bottom_y, double mfactor_x, double mfactor_y, plist* local, particle_t* particles, int n);
 
 //
 //  benchmarking program
@@ -93,16 +100,28 @@ int main( int argc, char **argv )
 	{
 		if(neighbors[i] != NONE) num_neighbors++;
 	}
+	
+	// Setup microblocks init data
+	cell_xw = right_x - left_x;
+	cell_yw = top_y   - bottom_y;
+	
+	int num_micro_x, num_micro_y;
+	num_micro_x = (right_x - left_x)/micro_length;
+	num_micro_y = (top_y   - bottom_y)/micro_length;
+	
+	double mfactor_x, mfactor_y; // Multiply by these to get approx microblock loc from coords
+	mfactor_x = num_micro_x/(right_x - left_x);
+	mfactor_y = num_micro_y/(top_y   - bottom_y);
+	
+	microblock* microblocks = (microblock*) malloc(num_micro_x*num_micro_y * sizeof(microblock));
+	setup_microblocks(microblocks, num_micro_x, num_micro_y, left_x, right_x, bottom_y, top_y);
     
     //
     //  allocate storage for local particles, ghost particles, ids
     //
-	partition_t* part = alloc_partition(n);
-
-	int* local_ids = (int*) malloc(n*sizeof(int));
-	int nlocal = 0;
+	plist* local = alloc_plist(n);
 	
-	int* ghost_ids = (int*) malloc(n*sizeof(int));
+    particle_t *ghost = (particle_t*) malloc( n * sizeof(particle_t) );
 	int nghost = 0;
 	
 	setup_ghost_structure(n);
@@ -118,12 +137,12 @@ int main( int argc, char **argv )
 		init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
+	distribute_particles(microblocks, num_micro_x, num_micro_y, left_x, bottom_y, mfactor_x, mfactor_y, local, particles, n);
 
     //
     //  simulate a number of time steps
     //
-    double simulation_time = read_timer( );
+    double simulation_time = read_timer();
     for( int step = 0; step < NSTEPS; step++ )
     {
 		//
@@ -163,8 +182,6 @@ int main( int argc, char **argv )
     //
     //  release resources
     //
-    free( local_ids );
-    free( ghost_ids );
     free( particles );
 	
 	free_emigrant_buf();
@@ -242,4 +259,51 @@ int select_particles(partition_t* part, int n, particle_t* particles, int* local
 	
 	// Make sure we know how many local particles we have.
 	return current_particle;
+}
+void setup_microblocks(microblock* microblocks, int num_micro_x, int num_micro_y, double left_x, double right_x, double bottom_y, double top_y);
+{
+	for(int x = 0; x < num_micro_x; ++x)
+	{
+		for(int y = 0; y < num_micro_y; ++y)
+		{
+			microblock* current = microblocks+ y*num_micro_x + x;
+			current->particles = (particle_t**) malloc(default_mbuf_depth * sizeof(particle_t*));
+			current->max_particles = default_mbuf_depth;
+			current->num_particles = 0;
+			
+			current->neighbors[p_sw] = ((x != 0)             && (y != 0)            ) ? (&microblocks[(y-1)*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_s ] = (                        (y != 0)            ) ? (&microblocks[(y-1)*num_micro_x + (x  )]) : (NO_MB);
+			current->neighbors[p_se] = ((x != num_micro_x-1) && (y != 0)            ) ? (&microblocks[(y-1)*num_micro_x + (x+1)]) : (NO_MB);
+			
+			current->neighbors[p_w ] = ((x != 0)                                    ) ? (&microblocks[(y  )*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_e ] = ((x != num_micro_x-1)                        ) ? (&microblocks[(y  )*num_micro_x + (x+1)]) : (NO_MB);
+			
+			current->neighbors[p_nw] = ((x != 0)             && (y != num_micro_y-1)) ? (&microblocks[(y+1)*num_micro_x + (x-1)]) : (NO_MB);
+			current->neighbors[p_n ] = (                        (y != num_micro_y-1)) ? (&microblocks[(y+1)*num_micro_x + (x  )]) : (NO_MB);
+			current->neighbors[p_ne] = ((x != num_micro_x-1) && (y != num_micro_y-1)) ? (&microblocks[(y+1)*num_micro_x + (x+1)]) : (NO_MB);
+			
+			current->left_x   = (x==0)             ? (left_x)   : (((right_x-left_x)/num_micro_x)*(x  ));
+			current->right_x  = (x==num_micro_x-1) ? (right_x)  : (((right_x-left_x)/num_micro_x)*(x+1));
+			current->bottom_y = (y==0)             ? (bottom_y) : (((top_y-bottom_y)/num_micro_y)*(y  ));
+			current->top_y    = (y==num_micro_y-1) ? (top_y)    : (((top_y-bottom_y)/num_micro_y)*(y+1));
+
+			omp_init_lock(&(current->lock));
+		}
+	}
+}
+
+void distribute_particles(microblock* microblocks, int num_micro_x, int num_micro_y, double left_x, double bottom_y, double mfactor_x, double mfactor_y, plist* local, particle_t* particles, int n);
+{
+	for(int i = 0; i < n; ++i)
+	{
+		int mb_x, mb_y;
+		mb_x = particles[i].x * mfactor_x;
+		mb_y = particles[i].y * mfactor_y;
+		
+		if(mb_x < 0 || mb_x > num_micro_x || mb_y < 0 || mb_y > num_micro_y) continue;
+		
+		particle_t* added_part = add_particle(local, particles[i]);
+		
+		mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, added_part);
+	}
 }
