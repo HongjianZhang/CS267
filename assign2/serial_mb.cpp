@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <pat_api.h>
 #include "common.h"
 #include "microblock.h"
+
+#define PAT_PROFILING 0
 
 const double micro_length  = cutoff*2;
 const int default_mbuf_depth = 4;
@@ -59,7 +62,9 @@ int main( int argc, char **argv )
     //
 	
 	double simulation_time = read_timer( );
-
+#if(PAT_PROFILING==1)
+	PAT_region_begin(1, "compute");
+#endif
 	for( int step = 0; step < NSTEPS; step++ )
 	{
 		//
@@ -141,6 +146,9 @@ int main( int argc, char **argv )
 	}
 	simulation_time = read_timer( ) - simulation_time;
     
+#if(PAT_PROFILING==1)
+	PAT_region_end(1);
+#endif
     printf("n = %d,\tsimulation time = %g seconds\n", n, simulation_time );
     
     free( particles );
