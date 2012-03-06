@@ -3,6 +3,7 @@
 mpi
 serial
 openmp
+pthreads
 *.txt
 job-hopper-test*
 *+*
