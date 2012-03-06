@@ -7,3 +7,4 @@ openmp
 job-hopper-test*
 *+*
 serial_mb
+results/*
