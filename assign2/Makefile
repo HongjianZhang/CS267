@@ -8,7 +8,7 @@ CFLAGS = -O3
 LIBS =
 
 
-TARGETS = serial pthreads openmp mpi
+TARGETS = serial pthreads openmp mpi serial_mb
 
 all:	$(TARGETS)
 
@@ -27,7 +27,7 @@ openmp.o: openmp.cpp common.h
 	$(CC) -c $(OPENMP) $(CFLAGS) openmp.cpp
 serial.o: serial.cpp common.h
 	$(CC) -c $(CFLAGS) serial.cpp
-serial_mb.o: serial.cpp microblocks.h common.h
+serial_mb.o: serial.cpp microblock.h common.h
 	$(CC) -c $(CFLAGS) serial_mb.cpp
 prune_sweep.o: prune_sweep.cpp common.h
 	$(CC) -c $(CFLAGS) prune_sweep.cpp

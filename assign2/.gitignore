@@ -6,3 +6,4 @@ openmp
 *.txt
 job-hopper-test*
 *+*
+serial_mb
