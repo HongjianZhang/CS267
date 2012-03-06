@@ -3,8 +3,11 @@
 #include <assert.h>
 #include <math.h>
 #include <omp.h>
+#include <pat_api.h>
 #include "common.h"
 #include "microblock.h"
+
+#define PAT_PROFILING 1
 
 const double micro_length  = cutoff*2;
 const int default_mbuf_depth = 4;
@@ -60,6 +63,9 @@ int main( int argc, char **argv )
     //
 	
 	double simulation_time = read_timer( );
+#if(PAT_PROFILING==1)
+	PAT_region_begin(1, "compute");
+#endif
 
     #pragma omp parallel
 	for( int step = 0; step < NSTEPS; step++ )
@@ -147,8 +153,13 @@ int main( int argc, char **argv )
 			save( fsave, n, particles );
 	}
 	simulation_time = read_timer( ) - simulation_time;
-    
-    printf("n = %d,\tsimulation time = %g seconds\n", n, simulation_time );
+
+#if(PAT_PROFILING==1)
+	PAT_region_end(1);
+#endif
+
+	int max_threads = omp_get_max_threads();   
+    printf("n = %d, nthreads = %d\tsimulation time = %g seconds\n", n, max_threads, simulation_time );
     
     free( particles );
     if( fsave )
