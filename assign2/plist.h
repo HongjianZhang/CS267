@@ -1,3 +1,6 @@
+#ifndef __PLIST_H
+#define __PLIST_H
+
 typedef struct {
   //Particles
   particle_t* particles;
@@ -7,11 +10,13 @@ typedef struct {
   //Active IDs
   int* is_id_active;
   int* free_ids;
-  int num_used_ids;
+  int num_used_ids; // also doubles as number of particles in system!
   
 } plist;
 
-plist* alloc_plist(int max_particles);
 void free_plist(plist* target);
+plist* alloc_plist(int max_particles);
 particle_t* add_particle(plist* basket, particle_t ball);
 void rm_particle(plist* basket, particle_t* ball);
+
+#endif

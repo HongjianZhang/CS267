@@ -6,7 +6,7 @@
 #include "common.h"
 #include "mpi_particles.h"
 
-#define GHOST_LENGTH (cutoff)
+#define GHOST_LENGTH(cutoff)
 
 int ghost_packet_length[8];
 particle_t* ghost_packet_particles[8];

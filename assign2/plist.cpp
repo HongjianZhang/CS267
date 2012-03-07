@@ -1,6 +1,5 @@
 #include plist.h
 
-
 plist* alloc_plist(int max_particles)
 {
 	plist* pl = (plist*) malloc(sizeof(plist));
@@ -46,9 +45,9 @@ particle_t* add_particle(plist* basket, particle_t ball)
 	//Copy data
 	basket->particles[id] = ball;
 	
-	if(part->num_used_ids > part->num_particles){    
-		//Increment num_particles
-		part->num_particles++;
+	if(part->num_used_ids > part->end_particle){    
+		//Increment end_particle
+		part->end_particle++;
 	}
 
 	//Return id
