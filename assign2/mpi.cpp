@@ -66,7 +66,6 @@ int main( int argc, char **argv )
 	}
 	
 	mpi_cell* mycell = create_mpi_cell(sim_size, num_proc_x, num_proc_y, rank);
-	
 	microblock* microblocks = (microblock*) malloc(mycell->num_micro_x*mycell->num_micro_y * sizeof(microblock));
 	setup_microblocks(microblocks, mycell);
 
@@ -83,13 +82,10 @@ int main( int argc, char **argv )
 	//  initialize and distribute the particles (that's fine to leave it unoptimized)
 	//
 	particle_t* particles = (particle_t*) malloc(n * sizeof(particle_t));
-	
 	if( rank == 0 )
 		init_particles( n, particles);
-	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
 	distribute_particles(microblocks, mycell, local, particles, n);
-
 	//
 	//  simulate a number of time steps
 	//

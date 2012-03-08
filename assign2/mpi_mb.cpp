@@ -119,14 +119,16 @@ void distribute_particles(microblock* microblocks, mpi_cell* mycell, plist* loca
 {
 	for(int i = 0; i < n; ++i)
 	{
-		int mb_x, mb_y;
-		mb_x = (particles[i].x - mycell->left_x)   * mycell->mfactor_x;
-		mb_y = (particles[i].y - mycell->bottom_y) * mycell->mfactor_y;
-		
-		if(mb_x < 0 || mb_x > mycell->num_micro_x || mb_y < 0 || mb_y > mycell->num_micro_y) continue;
-		
-		particle_t* added_part = add_particle(local, particles[i]);
-		mb_add_particle(microblocks + mb_y*mycell->num_micro_x + mb_x, added_part);
+		target = particles[i];
+		if(target.x >= mycell->left_x && target.x < mycell->right_x && target.y > mycell->bottom_y && target.y < mycell->top_y)
+		{
+			int mb_x, mb_y;
+			mb_x = (target.x - mycell->left_x)   * mycell->mfactor_x;
+			mb_y = (target.y - mycell->bottom_y) * mycell->mfactor_y;
+			
+			particle_t* added_part = add_particle(local, target);
+			mb_add_particle(microblocks + mb_y*(mycell->num_micro_x) + mb_x, added_part);
+		}
 	}
 }
 
