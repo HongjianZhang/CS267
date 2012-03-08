@@ -4,6 +4,8 @@
 #include <mpi.h>
 #include "common.h"
 
+#define GHOST_LENGTH(cutoff)
+
 #define EMIGRANT_TAG    1
 #define GHOST_TAG       2
 
@@ -11,7 +13,6 @@
 #define GHOST_FALSE	0
 
 const int micro_length = 2*cutoff;
-const int default_mbuf_depth = 6;
 
 extern MPI_Datatype PARTICLE;
 
@@ -45,6 +46,8 @@ void distribute_particles(microblock* microblocks, mpi_cell* mycell, plist* loca
 void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int n);
 bool compare_particles(particle_t left, particle_t right); // check if left_id < right_id
 
+void process_particles(microblock* microblocks, int num_mb);
+
 //
 // Functions to handle ghost buffers
 //
@@ -60,4 +63,9 @@ void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostbloc
 //
 void init_emigrant_buf(int n);
 void free_emigrant_buf();
+
+void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local);
+void send_emigrants(mpi_cell* mycell);
+void receive_immigrants(mpi_cell* mycell, microblock* microblocks, plist* local, int max_particles);
+
 #endif

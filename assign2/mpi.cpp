@@ -10,10 +10,6 @@
 
 MPI_Datatype PARTICLE;
 
-void mb_add_particle(microblock* microblock, particle_t* particle_addr);
-void mb_expand_particle(microblock* microblock, int new_max);
-void mb_rm_particle(microblock* microblock, int pos);
-
 //
 //  benchmarking program
 //
@@ -90,7 +86,7 @@ int main( int argc, char **argv )
 		init_particles( n, particles);
 	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	distribute_particles(microblocks, num_micro_x, num_micro_y, left_x, bottom_y, mfactor_x, mfactor_y, local, particles, n);
+	distribute_particles(microblocks, mycell, local, particles, n);
 
 	//
 	//  simulate a number of time steps
@@ -101,13 +97,13 @@ int main( int argc, char **argv )
 		//
 		//  Handle ghosting
 		//
-		prepare_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
-		send_ghost_packets(neighbors);
-		receive_ghost_packets(part, ghost_ids, &nghost, neighbors, num_neighbors, n);
+		prepare_ghost_packets(mycell, microblocks);
+		send_ghost_packets(mycell);
+		receive_ghost_packets(mycell, ghost, ghostblocks, n);
 	
         //  Compute all forces
         //
-		update_particles(part);
+		process_particles(microblocks, num_mb);
 		
 		//
 		//  Handle migration
@@ -121,7 +117,7 @@ int main( int argc, char **argv )
         //
 		if(savename && (step%SAVEFREQ) == 0)
 		{
-			prepare_save(rank, n_proc, &local, particles, n);
+			prepare_save(rank, n_proc, local, particles, n);
 			
 			if(fsave)
 				save( fsave, n, particles );

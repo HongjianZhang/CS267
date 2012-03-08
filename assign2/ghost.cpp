@@ -4,9 +4,8 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
-#include "mpi_particles.h"
-
-#define GHOST_LENGTH(cutoff)
+#include "mpi_mb.h"
+#include "ppile.h"
 
 int ghost_packet_length[8];
 particle_t* ghost_packet_particles[8];
@@ -36,104 +35,71 @@ void clean_ghost_structure()
 	free(received_ghosts);
 }
 
-void prepare_ghost_packets(partition_t* part, int* local_ids, int nlocal, double left_x, double  right_x, double bottom_y, double top_y, int neighbors[])
+void add_ghosts(microblock* basket, int packet_id)
+{
+	for(int i = 0; i < basket->num_particles; ++i)
+	{
+		ghost_packet_particles[packet_id][ghost_packet_length[packet_id]] = *(basket->particles[i]);
+		++ghost_packet_length[packet_id];
+	}
+}
+
+void prepare_ghost_packets(mpi_cell* mycell, microblock* microblocks)
 {
 	// Reset so will just overwrite old packet data
 	ghost_packet_length[p_sw] = 0; ghost_packet_length[p_s ] = 0; ghost_packet_length[p_se] = 0; ghost_packet_length[p_w ] = 0;
 	ghost_packet_length[p_e ] = 0; ghost_packet_length[p_nw] = 0; ghost_packet_length[p_n ] = 0; ghost_packet_length[p_ne] = 0;
 	
-	for(int i = 0; i < nlocal; ++i)
+	// Prepare corners
+	if(mycell->neighbors[p_sw]) add_ghosts(&microblocks[0                      *mycell->num_micro_x + 0]                      , p_sw);
+	if(mycell->neighbors[p_se]) add_ghosts(&microblocks[0                      *mycell->num_micro_x + (mycell->num_micro_x-1)], p_se);
+	if(mycell->neighbors[p_nw]) add_ghosts(&microblocks[(mycell->num_micro_y-1)*mycell->num_micro_x + 0]                      , p_nw);
+	if(mycell->neighbors[p_ne]) add_ghosts(&microblocks[(mycell->num_micro_y-1)*mycell->num_micro_x + (mycell->num_micro_x-1)], p_ne);
+	
+	// Prepare sides
+	for(int x = 0; x < mycell->num_micro_x; ++x)
 	{
-		particle_t particle = *get_particle(part, local_ids[i]);
-		
-		if(particle.x <= (left_x + GHOST_LENGTH)) // check if in W, SW, or NW ghost zone by x
-		{
-			if((neighbors[p_w] != -1)) // Add to packet if W neighbor exists
-			{
-				ghost_packet_particles[p_w][ghost_packet_length[p_w]] = particle;
-				++ghost_packet_length[p_w];
-			}
-			if(particle.y <= (bottom_y + GHOST_LENGTH)) // Add to packet if SW neighbor exists and y bounded
-			{
-				if((neighbors[p_sw] != -1)) 
-				{
-					ghost_packet_particles[p_sw][ghost_packet_length[p_sw]] = particle;
-					++ghost_packet_length[p_sw];
-				}
-			}
-			else if (particle.y >= (top_y - GHOST_LENGTH)) // Add to packet if NW neighbor exists and y bounded
-			{
-				if((neighbors[p_nw] != -1)) 
-				{
-					ghost_packet_particles[p_nw][ghost_packet_length[p_nw]] = particle;
-					++ghost_packet_length[p_nw];
-				}
-			}
-		}
-		else if(particle.x >= (right_x - GHOST_LENGTH)) // check if in E, SE, or NE ghost zone by x
-		{
-			if((neighbors[p_e] != -1)) // Add to packet if E neighbor exists
-			{
-				ghost_packet_particles[p_e][ghost_packet_length[p_e]] = particle;
-				++ghost_packet_length[p_e];
-			}
-			if(particle.y <= (bottom_y + GHOST_LENGTH)) // Add to packet if SE neighbor exists and y bounded
-			{
-				if((neighbors[p_se] != -1)) 
-				{
-					ghost_packet_particles[p_se][ghost_packet_length[p_se]] = particle;
-					++ghost_packet_length[p_se];
-				}
-			}
-			else if (particle.y >= (top_y - GHOST_LENGTH)) // Add to packet if NE neighbor exists and y bounded
-			{
-				if((neighbors[p_ne] != -1)) 
-				{
-					ghost_packet_particles[p_ne][ghost_packet_length[p_ne]] = particle;
-					++ghost_packet_length[p_ne];
-				}
-			}
-		}
-		
-		if(particle.y <= (bottom_y + GHOST_LENGTH)) // check if in S ghost zone by y (SW, SE already handled)
-		{
-			if((neighbors[p_s] != -1)) // Add to packet if S neighbor exists
-			{
-				ghost_packet_particles[p_s][ghost_packet_length[p_s]] = particle;
-				++ghost_packet_length[p_s];
-			}
-		}
-		else if(particle.y >= (top_y - GHOST_LENGTH)) // check if in N ghost zone by y (NW, NE already handled)
-		{
-			if((neighbors[p_n] != -1)) // Add to packet if S neighbor exists
-			{
-				ghost_packet_particles[p_n][ghost_packet_length[p_n]] = particle;
-				++ghost_packet_length[p_n];
-			}
-		}
+		if(mycell->neighbors[p_n]) add_ghosts(&microblocks[(mycell->num_micro_y-1)*mycell->num_micro_x + x], p_n);
+		if(mycell->neighbors[p_s]) add_ghosts(&microblocks[(0                    )*mycell->num_micro_x + x], p_s);
+	}
+	for(int x = 0; x < mycell->num_micro_x; ++x)
+	{
+		if(mycell->neighbors[p_e]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + (mycell->num_micro_x-1)], p_e);
+		if(mycell->neighbors[p_w]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + 0]                      , p_w);
 	}
 }
 
-void send_ghost_packets(int neighbors[])
+void send_ghost_packets(mpi_cell* mycell)
 {
 	int rc = 0;
 	for(int i = 0; i < 8; ++i)
 	{
-		if(neighbors[i] != NONE)
+		if(mycell->neighbors[i] != NONE)
 		{
-			MPI_Isend(ghost_packet_particles[i], ghost_packet_length[i], PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &(mpi_ghost_requests[rc++]));
+			MPI_Isend(ghost_packet_particles[i], ghost_packet_length[i], PARTICLE, mycell->neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &(mpi_ghost_requests[rc++]));
 		}
 	}
 }
 
-void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int* neighbors, int num_neighbors, int buf_size)
+void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostblocks, int max_particles)
 {
     MPI_Status status;
 	
 	// Remove old ghosts
-	for(int i = 0; i < *nghosts; ++i)
+	clear_particles(ghost);
+	
+	mb_clear(mycell->nw_ghostblock); mb_clear(mycell->ne_ghostblock);
+	mb_clear(mycell->sw_ghostblock); mb_clear(mycell->se_ghostblock);
+	
+	for(int x = 0; x < mycell->num_micro_x; ++x)
 	{
-		remove_particle(part, ghost_ids[i]);
+		mb_clear(mycell->n_ghostblocks[x]);
+		mb_clear(mycell->s_ghostblocks[x]);
+	}
+	for(int y = 0; y < mycell->num_micro_y; ++y)
+	{
+		mb_clear(mycell->e_ghostblocks[y]);
+		mb_clear(mycell->w_ghostblocks[y]);
 	}
 	
 	// Receive new ghosts
@@ -143,10 +109,10 @@ void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int*
 		int num_particles_rcvd = 0;
 		
         // If no neighbor in this direction, skip over it
-        if(neighbors[i] == NONE) continue;
+        if(mycell->neighbors[i] == NONE) continue;
 
         // Perform blocking read from neighbor
-        MPI_Recv (received_ghosts+total_received, (buf_size-total_received), PARTICLE, neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status); 
+        MPI_Recv (received_ghosts+total_received, (max_particles-total_received), PARTICLE, mycell->neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status); 
 
         MPI_Get_count(&status, PARTICLE, &num_particles_rcvd);
 		total_received += num_particles_rcvd;
@@ -155,12 +121,31 @@ void receive_ghost_packets(partition_t* part, int* ghost_ids, int* nghosts, int*
 	// Add new ghosts to system from packet
 	for(int i = 0; i < total_received; ++i)
 	{
-		ghost_ids[i] = add_particle(part, received_ghosts[i]);
-		set_ghost(part, ghost_ids[i], GHOST_TRUE);
+		particle_t* target = add_particle(ghost, received_ghosts[i]);
+		
+		int mb_x, mb_y;
+		mb_x = (target->x - mycell->left_x)   * mycell->mfactor_x;
+		mb_y = (target->y - mycell->bottom_y) * mycell->mfactor_y;
+		
+		if(target->x < mycell->left_x)
+		{
+			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->sw_ghostblock, target);
+			else if(target->y > mycell->top_y) mb_add_particle(mycell->nw_ghostblock, target);
+			else mb_add_particle(mycell->w_ghostblock[mb_y], target)
+		}
+		else if(target->x >= mycell->right_x)
+		{
+			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->se_ghostblock, target);
+			else if(target->y > mycell->top_y) mb_add_particle(mycell->ne_ghostblock, target);
+			else mb_add_particle(mycell->e_ghostblock[mb_y], target)
+		}
+		else
+		{
+			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->s_ghostblock[mb_x], target);
+			else if(target->y > mycell->top_y) mb_add_particle(mycell->n_ghostblock[mb_x], target);
+		}
 	}
 
-    *nghosts = total_received;
-
     // Make sure that all previous ghost messages have been sent, as we need to reuse the buffers
-    MPI_Waitall(num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
+    MPI_Waitall(mycell->num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
 }
