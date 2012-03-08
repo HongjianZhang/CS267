@@ -1,4 +1,5 @@
-#include plist.h
+#include "plist.h"
+#include <stdlib.h>
 
 plist* alloc_plist(int max_particles)
 {
@@ -31,7 +32,7 @@ void free_plist(plist* target)
 
 particle_t* add_particle(plist* basket, particle_t ball)
 {
-	if(basket->num_used_ids >= basket->max_particles)
+	if(basket->num_used_ids >= basket->max_length)
 	{
 		printf("Can not add another particle. Maximum number of particles reached.\n");
 		exit(-1);
@@ -45,9 +46,9 @@ particle_t* add_particle(plist* basket, particle_t ball)
 	//Copy data
 	basket->particles[id] = ball;
 	
-	if(part->num_used_ids > part->end_particle){    
+	if(basket->num_used_ids > basket->end_particle){    
 		//Increment end_particle
-		part->end_particle++;
+		basket->end_particle++;
 	}
 
 	//Return id
@@ -60,15 +61,15 @@ void rm_particle(plist* basket, particle_t* ball)
 	int id = ball - basket->particles;
 	
 	// Sanity check the id
-	if((id >= max_length) || (basket->is_id_active[id] == 0))
+	if((id >= basket->max_length) || (basket->is_id_active[id] == 0))
 	{
 		printf("RP Fault: Particle id invalid");
 		exit(-1);
 	}
 	
 	//Set inactive
-	p->is_id_active[id] = 0;
+	basket->is_id_active[id] = 0;
 	//Return id
-	p->num_used_ids--;
-	p->free_ids[p->num_used_ids] = id;
+	basket->num_used_ids--;
+	basket->free_ids[basket->num_used_ids] = id;
 }

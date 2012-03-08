@@ -1,6 +1,8 @@
 #ifndef __PPILE_H
 #define __PPILE_H
 
+#include "common.h"
+
 typedef struct {
   //Particles
   particle_t* particles;
@@ -15,3 +17,4 @@ particle_t* add_particle(ppile* basket, particle_t ball);
 void clear_particles(ppile* basket);
 
 #endif
+

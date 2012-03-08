@@ -5,8 +5,10 @@
 #include <math.h>
 #include <algorithm>
 #include "common.h"
-#include "mpi_particles.h"
+#include "mpi_mb.h"
 #include "microblock.h"
+#include "plist.h"
+#include "ppile.h"
 
 MPI_Datatype PARTICLE;
 
@@ -65,14 +67,14 @@ int main( int argc, char **argv )
 	
 	mpi_cell* mycell = create_mpi_cell(sim_size, num_proc_x, num_proc_y, rank);
 	
-	microblock* microblocks = (microblock*) malloc(num_micro_x*num_micro_y * sizeof(microblock));
+	microblock* microblocks = (microblock*) malloc(mycell->num_micro_x*mycell->num_micro_y * sizeof(microblock));
 	setup_microblocks(microblocks, mycell);
 
 	//
 	//  allocate storage for local particles, ghost particles, ids
 	//
 	plist* local = alloc_plist(n);
-	plist* ghost = alloc_ppile(n);
+	ppile* ghost = alloc_ppile(n);
 	
 	setup_ghost_structure(n);
 	init_emigrant_buf(n);
@@ -99,18 +101,18 @@ int main( int argc, char **argv )
 		//
 		prepare_ghost_packets(mycell, microblocks);
 		send_ghost_packets(mycell);
-		receive_ghost_packets(mycell, ghost, ghostblocks, n);
+		receive_ghost_packets(mycell, ghost, n);
 	
         //  Compute all forces
         //
-		process_particles(microblocks, num_mb);
+		process_particles(microblocks, mycell->num_micro_x*mycell->num_micro_y);
 		
 		//
 		//  Handle migration
 		//
-		prepare_emigrants(part, local_ids, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
-		send_emigrants(neighbors);
-		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n);
+		prepare_emigrants(mycell, microblocks, local);
+		send_emigrants(mycell);
+		receive_immigrants(mycell, microblocks, local, n);
 		
 		//
         //  save current step if necessary
@@ -147,7 +149,7 @@ int main( int argc, char **argv )
     return 0;
 }
 
-void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int n);
+void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int n)
 {
 	// First, get the number of particles in each node into node 0. Also prepare array placement offsets.
 	int* node_particles_num    = (int *) malloc(n_proc*sizeof(int));
@@ -170,16 +172,16 @@ void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int
 	int cp = 0;
 	for(int i = 0; i < local->end_particle; ++i)
 	{
-		if(local->is_id_active[i] == 0) continue
+		if(local->is_id_active[i] == 0) continue;
 		
-		particle_t packing = *(local->particles[i]);
+		particle_t packing = local->particles[i];
 		collapsed_local[cp] = packing;
 		
 		cp++;
 	}
 	
 	// Next, send the particles to node 0
-	MPI_Gatherv(collapsed_local, nlocal, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
+	MPI_Gatherv(collapsed_local, cp, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
 	
 	// Finally, sort the particles at node 0
 	if(rank == 0)
@@ -193,6 +195,7 @@ void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int
 	free(node_particles_num);
 	free(node_particles_offset);
 }
+
 bool compare_particles(particle_t left, particle_t right) // check if id < id
 {
 	return left.globalID < right.globalID;

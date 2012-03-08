@@ -3,8 +3,11 @@
 
 #include <mpi.h>
 #include "common.h"
+#include "microblock.h"
+#include "plist.h"
+#include "ppile.h"
 
-#define GHOST_LENGTH(cutoff)
+#define GHOST_LENGTH cutoff
 
 #define EMIGRANT_TAG    1
 #define GHOST_TAG       2
@@ -12,7 +15,7 @@
 #define GHOST_TRUE	1
 #define GHOST_FALSE	0
 
-const int micro_length = 2*cutoff;
+const double micro_length = 2*cutoff;
 
 extern MPI_Datatype PARTICLE;
 
@@ -34,7 +37,7 @@ typedef struct {
 	microblock* s_ghostblocks;
 	microblock* e_ghostblocks;
 	microblock* w_ghostblocks;
-} mpi_cell
+} mpi_cell;
 
 //
 // Functions to initialize each processor's set of particles at the beginning of the simulation, and to
@@ -56,7 +59,7 @@ void clean_ghost_structure();
 
 void prepare_ghost_packets(mpi_cell* mycell, microblock* microblocks);
 void send_ghost_packets(mpi_cell* mycell);
-void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostblocks, int max_particles);
+void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, int max_particles);
 
 //
 // Functions to handle emigrant buffers

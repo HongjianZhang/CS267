@@ -1,4 +1,5 @@
 #include "microblock.h"
+#include <stdlib.h>
 
 void mb_init(microblock* target)
 {
@@ -48,3 +49,4 @@ void mb_clear(microblock* microblock)
 {
 	microblock->num_particles = 0;
 }
+

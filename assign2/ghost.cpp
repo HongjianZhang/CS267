@@ -62,7 +62,7 @@ void prepare_ghost_packets(mpi_cell* mycell, microblock* microblocks)
 		if(mycell->neighbors[p_n]) add_ghosts(&microblocks[(mycell->num_micro_y-1)*mycell->num_micro_x + x], p_n);
 		if(mycell->neighbors[p_s]) add_ghosts(&microblocks[(0                    )*mycell->num_micro_x + x], p_s);
 	}
-	for(int x = 0; x < mycell->num_micro_x; ++x)
+	for(int y = 0; y < mycell->num_micro_y; ++y)
 	{
 		if(mycell->neighbors[p_e]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + (mycell->num_micro_x-1)], p_e);
 		if(mycell->neighbors[p_w]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + 0]                      , p_w);
@@ -81,7 +81,7 @@ void send_ghost_packets(mpi_cell* mycell)
 	}
 }
 
-void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostblocks, int max_particles)
+void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, int max_particles)
 {
     MPI_Status status;
 	
@@ -93,13 +93,13 @@ void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostbloc
 	
 	for(int x = 0; x < mycell->num_micro_x; ++x)
 	{
-		mb_clear(mycell->n_ghostblocks[x]);
-		mb_clear(mycell->s_ghostblocks[x]);
+		mb_clear(mycell->n_ghostblocks+x);
+		mb_clear(mycell->s_ghostblocks+x);
 	}
 	for(int y = 0; y < mycell->num_micro_y; ++y)
 	{
-		mb_clear(mycell->e_ghostblocks[y]);
-		mb_clear(mycell->w_ghostblocks[y]);
+		mb_clear(mycell->e_ghostblocks+y);
+		mb_clear(mycell->w_ghostblocks+y);
 	}
 	
 	// Receive new ghosts
@@ -131,18 +131,18 @@ void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, microblock* ghostbloc
 		{
 			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->sw_ghostblock, target);
 			else if(target->y > mycell->top_y) mb_add_particle(mycell->nw_ghostblock, target);
-			else mb_add_particle(mycell->w_ghostblock[mb_y], target)
+			else mb_add_particle(&mycell->w_ghostblocks[mb_y], target);
 		}
 		else if(target->x >= mycell->right_x)
 		{
 			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->se_ghostblock, target);
 			else if(target->y > mycell->top_y) mb_add_particle(mycell->ne_ghostblock, target);
-			else mb_add_particle(mycell->e_ghostblock[mb_y], target)
+			else mb_add_particle(&mycell->e_ghostblocks[mb_y], target);
 		}
 		else
 		{
-			if(target->y < mycell->bottom_y)   mb_add_particle(mycell->s_ghostblock[mb_x], target);
-			else if(target->y > mycell->top_y) mb_add_particle(mycell->n_ghostblock[mb_x], target);
+			if(target->y < mycell->bottom_y)   mb_add_particle(&mycell->s_ghostblocks[mb_x], target);
+			else if(target->y > mycell->top_y) mb_add_particle(&mycell->n_ghostblocks[mb_x], target);
 		}
 	}
 

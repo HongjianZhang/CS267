@@ -1,4 +1,5 @@
 #include "mpi_mb.h"
+#include <stdlib.h>
 
 mpi_cell* create_mpi_cell(double sim_size, int num_proc_x, int num_proc_y, int rank)
 {
@@ -55,39 +56,39 @@ mpi_cell* create_mpi_cell(double sim_size, int num_proc_x, int num_proc_y, int r
 	
 	for(int x = 0; x < target->num_micro_x; ++x)
 	{
-		mb_init(target->n_ghostblocks[x]);
-		mb_init(target->s_ghostblocks[x]);
+		mb_init(&(target->n_ghostblocks[x]));
+		mb_init(&(target->s_ghostblocks[x]));
 	}
 	for(int y = 0; y < target->num_micro_y; ++y)
 	{
-		mb_init(target->e_ghostblocks[y]);
-		mb_init(target->w_ghostblocks[y]);
+		mb_init(&(target->e_ghostblocks[y]));
+		mb_init(&(target->w_ghostblocks[y]));
 	}
 	
 	return target;
 }
 
-void setup_microblocks(microblock* microblocks, mpi_cell* mycell);
+void setup_microblocks(microblock* microblocks, mpi_cell* mycell)
 {
 	for(int x = 0; x < mycell->num_micro_x; ++x)
 	{
 		for(int y = 0; y < mycell->num_micro_y; ++y)
 		{
-			microblock* current = microblocks+y*num_micro_x + x;
+			microblock* current = microblocks+y*mycell->num_micro_x + x;
 			mb_init(current);
 			
 			// Setup cell boundaries
-			current->left_x   = (x==0)                     ? (left_x)   : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x  ));
-			current->right_x  = (x==mycell->num_micro_x-1) ? (right_x)  : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x+1));
-			current->bottom_y = (y==0)                     ? (bottom_y) : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y  ));
-			current->top_y    = (y==mycell->num_micro_y-1) ? (top_y)    : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y+1));
+			current->left_x   = (x==0)                     ? (mycell->left_x)   : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x  ));
+			current->right_x  = (x==mycell->num_micro_x-1) ? (mycell->right_x)  : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x+1));
+			current->bottom_y = (y==0)                     ? (mycell->bottom_y) : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y  ));
+			current->top_y    = (y==mycell->num_micro_y-1) ? (mycell->top_y)    : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y+1));
 			
 			// Link microblock to neighboring microblocks
 			if(y == 0)
 			{
-				current->neighbors[p_sw] = (x != 0)                     ? (&(mycell->s_ghostblocks[x-1])) : (&(mycell->sw_ghostblock));
+				current->neighbors[p_sw] = (x != 0)                     ? (&(mycell->s_ghostblocks[x-1])) : ((mycell->sw_ghostblock));
 				current->neighbors[p_s ] =                                (&(mycell->s_ghostblocks[x  ]));
-				current->neighbors[p_se] = (x != mycell->num_micro_x-1) ? (&(mycell->s_ghostblocks[x+1])) : (&(mycell->se_ghostblock));
+				current->neighbors[p_se] = (x != mycell->num_micro_x-1) ? (&(mycell->s_ghostblocks[x+1])) : ((mycell->se_ghostblock));
 			}
 			else
 			{
@@ -101,9 +102,9 @@ void setup_microblocks(microblock* microblocks, mpi_cell* mycell);
 			
 			if(y == mycell->num_micro_y-1)
 			{
-				current->neighbors[p_nw] = (x != 0)                     ? (&(mycell->n_ghostblocks[x-1])) : (&(mycell->nw_ghostblock));
+				current->neighbors[p_nw] = (x != 0)                     ? (&(mycell->n_ghostblocks[x-1])) : ((mycell->nw_ghostblock));
 				current->neighbors[p_n ] =                                (&(mycell->n_ghostblocks[x  ]));
-				current->neighbors[p_ne] = (x != mycell->num_micro_x-1) ? (&(mycell->n_ghostblocks[x+1])) : (&(mycell->ne_ghostblock));
+				current->neighbors[p_ne] = (x != mycell->num_micro_x-1) ? (&(mycell->n_ghostblocks[x+1])) : ((mycell->ne_ghostblock));
 			}
 			else
 			{
@@ -125,7 +126,7 @@ void distribute_particles(microblock* microblocks, mpi_cell* mycell, plist* loca
 		if(mb_x < 0 || mb_x > mycell->num_micro_x || mb_y < 0 || mb_y > mycell->num_micro_y) continue;
 		
 		particle_t* added_part = add_particle(local, particles[i]);
-		mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, added_part);
+		mb_add_particle(microblocks + mb_y*mycell->num_micro_x + mb_x, added_part);
 	}
 }
 

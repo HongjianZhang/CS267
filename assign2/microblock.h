@@ -2,6 +2,7 @@
 #define __MICROBLOCK_H
 
 #include <omp.h>
+#include "common.h"
 
 const int default_mbuf_depth = 6;
 #define NO_MB 0
@@ -30,3 +31,4 @@ void mb_rm_particle(microblock* microblock, int pos);
 void mb_clear(microblock* microblock);
 
 #endif
+

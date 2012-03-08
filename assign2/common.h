@@ -1,6 +1,8 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
+#include <stdio.h>
+
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
 
@@ -18,60 +20,6 @@ typedef struct
   double ay;
   int globalID;
 } particle_t;
-
-//Collision Token
-typedef struct {
-  double position;
-  int type;
-  int particle_id;
-} token;
-
-//Active collisions
-//List of [particle_id1 particle_id2] pairs
-typedef struct {
-  int id1;
-  int id2;
-} collision;
-
-//Holds the information for a single partition
-typedef struct {
-  //Particles
-  particle_t* particles;
-  int num_particles;
-  int max_particles;
-
-  //Active IDs
-  int* is_id_active;
-  int* free_ids;
-  int num_used_ids;
-
-  //Ghost flags
-  int* is_ghost;
-
-  //Collision Tokens
-  token* xtokens;
-  token* ytokens;
-
-  //Active Collisions
-  collision* active_collisions;
-  int num_active_collisions;
-
-  //Collision table
-  char* collision_table;
-} partition_t;
-
-//================================================================================
-//====================== Collision Detector Interface ============================
-//================================================================================
-partition_t* alloc_partition(int max_particles);
-void free_partition_t(partition_t* p);
-int add_particle(partition_t* part, particle_t p);
-void remove_particle(partition_t* p, int id);
-void set_ghost(partition_t* p, int id, int is_ghost);
-void set_state(partition_t* p, int id, double x, double y, double vx, double vy);
-particle_t* get_particle(partition_t* p, int id);
-void update_particles(partition_t* p);
-
 
 //
 //  saving parameters

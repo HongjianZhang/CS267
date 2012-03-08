@@ -65,8 +65,6 @@ void free_emigrant_buf()
 //
 void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local)
 {
-	int message_dir;
-
     // Initialize all emigrant counts to zero
     for(int i = 0; i < 8; i++) emigrant_cnt[i] = 0;
 
@@ -88,21 +86,21 @@ void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local)
 				int new_loc;
 				if(migrant->x < mycell->left_x)
 				{
-					if(migrant->y < mycell->bottom_y)	new_loc = p_sw
-					else if(migrant->y > mycell->top_y) new_loc = p_nw
-					else new_loc = p_w
+					if(migrant->y < mycell->bottom_y)	new_loc = p_sw;
+					else if(migrant->y > mycell->top_y) new_loc = p_nw;
+					else new_loc = p_w;
 				}
 				else if(migrant->x > mycell->right_x)
 				{
-					if(migrant->y < mycell->bottom_y)	new_loc = p_se
-					else if(migrant->y > mycell->top_y) new_loc = p_ne
-					else new_loc = p_e
+					if(migrant->y < mycell->bottom_y)	new_loc = p_se;
+					else if(migrant->y > mycell->top_y) new_loc = p_ne;
+					else new_loc = p_e;
 				}
 				else
 				{
-					if(migrant->y < mycell->bottom_y)	new_loc = p_s
-					else if(migrant->y > mycell->top_y) new_loc = p_n
-					else new_loc = -1
+					if(migrant->y < mycell->bottom_y)	new_loc = p_s;
+					else if(migrant->y > mycell->top_y) new_loc = p_n;
+					else new_loc = -1;
 				}
 				
 				if(new_loc == -1) // Relocate particle in cell

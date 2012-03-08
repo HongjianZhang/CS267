@@ -1,4 +1,5 @@
-#include plist.h
+#include "ppile.h"
+#include <stdlib.h>
 
 ppile* alloc_ppile(int max_particles)
 {
@@ -34,7 +35,7 @@ particle_t* add_particle(ppile* basket, particle_t ball)
 	return &(basket->particles[new_id]);
 }
 
-void clear_particles(ppile* basket);
+void clear_particles(ppile* basket)
 {
 	basket->num_particles = 0;
 }

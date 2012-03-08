@@ -1,6 +1,8 @@
 #ifndef __PLIST_H
 #define __PLIST_H
 
+#include "common.h"
+
 typedef struct {
   //Particles
   particle_t* particles;
@@ -20,3 +22,4 @@ particle_t* add_particle(plist* basket, particle_t ball);
 void rm_particle(plist* basket, particle_t* ball);
 
 #endif
+
