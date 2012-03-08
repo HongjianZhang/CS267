@@ -2,5 +2,5 @@
 
 for i in *.xf
 do
-	pat_report $i
+	pat_report -O profile -T $i 
 done

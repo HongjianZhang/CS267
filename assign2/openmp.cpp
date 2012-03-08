@@ -7,7 +7,7 @@
 #include "common.h"
 #include "microblock.h"
 
-#define PAT_PROFILING 1
+#define PAT_PROFILING 2
 
 const double micro_length  = cutoff*2;
 const int default_mbuf_depth = 4;
@@ -71,6 +71,10 @@ int main( int argc, char **argv )
 	for( int step = 0; step < NSTEPS; step++ )
 	{
 	#pragma omp barrier
+
+#if(PAT_PROFILING==2)
+		PAT_region_begin(2, "p_compute");
+#endif
 		//
 		//  compute all forces
 		//
@@ -105,7 +109,13 @@ int main( int argc, char **argv )
 				}
 			}
 		}
+#if(PAT_PROFILING==2)
+		PAT_region_end(2);
+#endif
 
+#if(PAT_PROFILING==2)
+		PAT_region_begin(3, "p_move");
+#endif
 		//
 		//  move particles
 		//
@@ -118,7 +128,13 @@ int main( int argc, char **argv )
 				move(*(microblocks[mb].particles[i]));
 			}
 		}
+#if(PAT_PROFILING==2)
+		PAT_region_end(3);
+#endif
 		
+#if(PAT_PROFILING==2)
+		PAT_region_begin(4, "p_migrate");
+#endif
 		//  migrate particles between microblocks as necessary
         #pragma omp for
 		for(int mb = 0; mb < num_micro_x*num_micro_y; ++mb)
@@ -144,6 +160,9 @@ int main( int argc, char **argv )
 				}
 			}
 		}
+#if(PAT_PROFILING==2)
+		PAT_region_end(4);
+#endif
 
 		//
 		//  save if necessary
