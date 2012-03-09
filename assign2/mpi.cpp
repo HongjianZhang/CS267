@@ -85,7 +85,9 @@ int main( int argc, char **argv )
 	if( rank == 0 )
 		init_particles( n, particles);
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
+
 	distribute_particles(microblocks, mycell, local, particles, n);
+
 	//
 	//  simulate a number of time steps
 	//

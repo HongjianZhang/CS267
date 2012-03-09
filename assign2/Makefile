@@ -39,14 +39,14 @@ common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
 dumb.o: dumb.cpp common.h
 	$(CC) -c $(CFLAGS) dumb.cpp
-mpi_mb.o: common.h
+mpi_mb.o: common.h mpi_mb.cpp
 	$(MPCC) -c $(CFLAGS) mpi_mb.cpp
 
-microblock.o: microblock.h
+microblock.o: microblock.h microblock.cpp
 	$(CC) -c $(CFLAGS) microblock.cpp
-plist.o: plist.h
+plist.o: plist.h plist.cpp
 	$(CC) -c $(CFLAGS) plist.cpp
-ppile.o: ppile.h
+ppile.o: ppile.h ppile.cpp
 	$(CC) -c $(CFLAGS) ppile.cpp
 
 clean:

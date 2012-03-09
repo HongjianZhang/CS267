@@ -66,7 +66,7 @@ void free_emigrant_buf()
 void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local)
 {
     // Initialize all emigrant counts to zero
-    for(int i = 0; i < 8; i++) emigrant_cnt[i] = 0;
+	for(int i = 0; i < 8; i++) emigrant_cnt[i] = 0;
 
     // Loop through all the particles in each microblock, checking if they have left the bounds of this processor or their microblock
 	for(int mb = 0; mb < (mycell->num_micro_x*mycell->num_micro_y); ++mb)
@@ -83,7 +83,7 @@ void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local)
 				mb_rm_particle(microblocks + mb, i);
 				--i;
 				
-				int new_loc;
+				int new_loc = -1;
 				if(migrant->x < mycell->left_x)
 				{
 					if(migrant->y < mycell->bottom_y)	new_loc = p_sw;
@@ -106,11 +106,11 @@ void prepare_emigrants(mpi_cell* mycell, microblock* microblocks, plist* local)
 				if(new_loc == -1) // Relocate particle in cell
 				{
 					int mb_x, mb_y;
-					mb_x = migrant->x * mycell->mfactor_x;
-					mb_y = migrant->y * mycell->mfactor_y;
+					mb_x = (migrant->x - mycell->left_x) * mycell->mfactor_x;
+					mb_y = (migrant->y - mycell->bottom_y)* mycell->mfactor_y;
 
-					mb_x = min(max(0,mb_x), mycell->num_micro_x);
-					mb_y = min(max(0,mb_y), mycell->num_micro_y);
+					mb_x = min(max(0,mb_x), mycell->num_micro_x-1);
+					mb_y = min(max(0,mb_y), mycell->num_micro_y-1);
 					
 					mb_add_particle(microblocks + mb_y*mycell->num_micro_x + mb_x, migrant);
 				}
@@ -180,11 +180,11 @@ void receive_immigrants(mpi_cell* mycell, microblock* microblocks, plist* local,
 			particle_t* target = add_particle(local, immigrant_buf[j]);
 			
 			int mb_x, mb_y;
-			mb_x = target->x * mycell->mfactor_x;
-			mb_y = target->y * mycell->mfactor_y;
+			mb_x = (target->x - mycell->left_x) * mycell->mfactor_x;
+			mb_y = (target->y - mycell->bottom_y) * mycell->mfactor_y;
 
-			mb_x = min(max(0,mb_x), mycell->num_micro_x);
-			mb_y = min(max(0,mb_y), mycell->num_micro_y);
+			mb_x = min(max(0,mb_x), mycell->num_micro_x-1);
+			mb_y = min(max(0,mb_y), mycell->num_micro_y-1);
 			
 			mb_add_particle(microblocks + mb_y*mycell->num_micro_x + mb_x, target);
 		}

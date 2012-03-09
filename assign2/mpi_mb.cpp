@@ -78,10 +78,10 @@ void setup_microblocks(microblock* microblocks, mpi_cell* mycell)
 			mb_init(current);
 			
 			// Setup cell boundaries
-			current->left_x   = (x==0)                     ? (mycell->left_x)   : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x  ));
-			current->right_x  = (x==mycell->num_micro_x-1) ? (mycell->right_x)  : (((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x+1));
-			current->bottom_y = (y==0)                     ? (mycell->bottom_y) : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y  ));
-			current->top_y    = (y==mycell->num_micro_y-1) ? (mycell->top_y)    : (((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y+1));
+			current->left_x   = (x==0)                     ? (mycell->left_x)   : (mycell->left_x   + ((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x  ));
+			current->right_x  = (x==mycell->num_micro_x-1) ? (mycell->right_x)  : (mycell->left_x   + ((mycell->right_x-mycell->left_x)/mycell->num_micro_x)*(x+1));
+			current->bottom_y = (y==0)                     ? (mycell->bottom_y) : (mycell->bottom_y + ((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y  ));
+			current->top_y    = (y==mycell->num_micro_y-1) ? (mycell->top_y)    : (mycell->bottom_y + ((mycell->top_y-mycell->bottom_y)/mycell->num_micro_y)*(y+1));
 			
 			// Link microblock to neighboring microblocks
 			if(y == 0)
@@ -119,13 +119,12 @@ void distribute_particles(microblock* microblocks, mpi_cell* mycell, plist* loca
 {
 	for(int i = 0; i < n; ++i)
 	{
-		target = particles[i];
+		particle_t target = particles[i];
 		if(target.x >= mycell->left_x && target.x < mycell->right_x && target.y > mycell->bottom_y && target.y < mycell->top_y)
 		{
 			int mb_x, mb_y;
 			mb_x = (target.x - mycell->left_x)   * mycell->mfactor_x;
 			mb_y = (target.y - mycell->bottom_y) * mycell->mfactor_y;
-			
 			particle_t* added_part = add_particle(local, target);
 			mb_add_particle(microblocks + mb_y*(mycell->num_micro_x) + mb_x, added_part);
 		}

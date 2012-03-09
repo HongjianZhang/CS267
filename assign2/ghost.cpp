@@ -49,7 +49,32 @@ void prepare_ghost_packets(mpi_cell* mycell, microblock* microblocks)
 	// Reset so will just overwrite old packet data
 	ghost_packet_length[p_sw] = 0; ghost_packet_length[p_s ] = 0; ghost_packet_length[p_se] = 0; ghost_packet_length[p_w ] = 0;
 	ghost_packet_length[p_e ] = 0; ghost_packet_length[p_nw] = 0; ghost_packet_length[p_n ] = 0; ghost_packet_length[p_ne] = 0;
-	
+/*
+	for(int i = 0; i < 8; ++i)
+	{
+		for(int mb = 0; mb < mycell->num_micro_x*mycell->num_micro_y; ++mb)
+		{
+			add_ghosts(microblocks + mb, i);
+		}
+	}
+*/
+	for(int x = 0; x < mycell->num_micro_x; ++x)
+	{
+		for(int i = 0; i < 8; ++i)
+		{
+			add_ghosts(microblocks + x, i);
+			add_ghosts(microblocks + (mycell->num_micro_y-1)*mycell->num_micro_x + x, i);
+		}
+	}
+	for(int y = 1; y < mycell->num_micro_y-1; ++y)
+	{
+		for(int i = 0; i < 8; ++i)
+		{
+			add_ghosts(microblocks + y*mycell->num_micro_x, i);
+			add_ghosts(microblocks + y*mycell->num_micro_x + mycell->num_micro_x - 1, i);
+		}
+	}
+/*	
 	// Prepare corners
 	if(mycell->neighbors[p_sw]) add_ghosts(&microblocks[0                      *mycell->num_micro_x + 0]                      , p_sw);
 	if(mycell->neighbors[p_se]) add_ghosts(&microblocks[0                      *mycell->num_micro_x + (mycell->num_micro_x-1)], p_se);
@@ -66,7 +91,7 @@ void prepare_ghost_packets(mpi_cell* mycell, microblock* microblocks)
 	{
 		if(mycell->neighbors[p_e]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + (mycell->num_micro_x-1)], p_e);
 		if(mycell->neighbors[p_w]) add_ghosts(&microblocks[(y)*mycell->num_micro_x + 0]                      , p_w);
-	}
+	}*/
 }
 
 void send_ghost_packets(mpi_cell* mycell)
