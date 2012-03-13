@@ -92,13 +92,11 @@ After the initialization stage, the main loop performs following operations, in 
 \item Receive ghost particles from neighboring processors, and sort them into the local particle list.
 \end{itemize}
 
-Emmigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI Waitall command is also used.
+Emmigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI {\em Waitall} command is also used.
 
-Besides determining the emigrant particles that must leave the processor, each processor also determines which particles lie near...
+Besides determining the emigrant particles that must leave the processor, each processor also determines which local particles lie near the boundary of, but still within, the processor's space. The particles that lie within this ghost region are added to one of three lists: new ghost list (if they were not within the ghost region last cycle), moved ghost list (if they were within the ghost region last cycle) or the deleted ghost list (if a particle is no longer a ghost). These three lists are then sent to the appropriate neighbors, with an asynchronous MPI send.
 
-lie within cell, near the border (i.e. the ghost region), three lists are compiled. Moved, new, deleted. Send async to neighbors.
-
-Do blocking read from neighbors to receive ghost lists. Either update position, add or remove. Since blocks large, particles should remain ghosts for number of cycles. By updating position, O(1) work is required in moving to new position.
+Each processor then performs three blocking reads from each of its neighbors, to receive the three ghost lists. Each ghost particle is either added, removed or moved around in the local particle list. The advantage of having three lists is that particles tend to remain in the ghost region for a number of consecutive cycles, and simply updating the position of the ghost particles is much faster O(1) than removing and then adding the ghost particles back O(n).
 
 If the results must be saved, an MPI Gather operation is used to send all the particles to processor 0, who writes them to file.
 
@@ -119,6 +117,10 @@ The performance of the algorithms described in the previous section is reported 
 
 \subsection{MPI using Sweep and Prune}
 
+Figure \ref{mpips_time_vs_n} shows the time taken to execute 100 cycles of the simulation, with different numbers of particles (n). Log-log plots for 4, 8, 16, 24 and 48 processors are given. Since each of Hopper's nodes have 24 processors, only the 48-processor plot spans two physical machines; the other experiments were all run on a single machine.
+
+If the MPI Sweep and Prune algorithm ran in purely O(n) time, one would expect the log-log curves in Figure~\ref{mpips_time_vs_n} to be linear with a slope of 1. However, if one attempts to fit a polynomial curve to these plots, one finds that the degree of linearity depends on the number of processors. With 4 processors, the time versus n curve is best approximated by an O(n$^{1.7}$) curve, while at 24 processors, the curve is best approximated by a straight line, i.e. O(n). Therefore, the algorithm runs in O(n) time, as long as 16 or more processors are used in parallel. The O(n$^{1.7}$) run-time with few processors is due to the O(n$^{2}$) sort that must be performed whenever a ghost particle or immigrant particle is inserted into a local processor's particle list. With 16 or more processors, the number of immigrants and ghosts per processor decreases sufficiently that this sorting cost becomes negligable.
+
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
@@ -126,7 +128,9 @@ The performance of the algorithms described in the previous section is reported 
 \label{mpips_time_vs_n}
 \end{figure}
 
-Figure \ref{mpips_speedup_vs_p} results are noisy. Could have been further improved by multiple runs and averaging results.
+Figure \ref{mpips_speedup_vs_p} is a log-linear plot showing the percentage of peak machine FLOPS/s acheived as the number of processors is increased. For all values of {\em n} and {\em p}, the parallel algorithm does not acheive more than 1\% of total machine peak (i.e. combined performance of all processors). This clearly indicates that the software is spending a large amount of time waiting for MPI network responses or cache misses. Furthermore, the percentage of machine peaks seems to decreases slightly as P increases, indicating that the algorithm spends more time communicating and less time computing, as the number of processors is increased. This is verified by Figure~\ref{mpips_timealloc_vs_p}.
+
+Other than these facts, not much else can be drawn from this plot, due to the unreliable FLOPS/s reported by Craypat. Craypat introduces a large overhead when profiling the code (as large as 99\%), which must be factored out in the FLOPS/s calculation. However, the exact overhead is only an estimate, and varies drastically from run to run. As a result, the curves in Figure \ref{mpips_speedup_vs_p} are rather noisy. This could be improved by profiling the code multiple times, and averaging the results.
 
 \begin{figure}[!h]
 \centering
@@ -135,12 +139,16 @@ Figure \ref{mpips_speedup_vs_p} results are noisy. Could have been further impro
 \label{mpips_flops_vs_p}
 \end{figure}
 
+Figure \ref{mpips_speedup_vs_p} shows the speedup achieved by adding more processors. Note that this is relative to the purely serial sweep-and-prune code, which does not do any communication. For 500 particles, no speedup is achieved by adding more processors, as the processors spend all their time communicating and virtually no time actually computing collisions. However, for 10 000 particles, the speedup curve is perfectly linear with a slope of 1. If the number of processors is doubled, the program runs in half the time. However, the speedup is not {\em p-times}, but rather {\em (p/k)-times}, where {\em k} is the fixed cost of communication. At a count of 40 000 processors, the speedup is actually greater than linear, as the number of ghost and immigrant particles per processor decreases as {\em p} is increased. Since the cost of sorting the ghost and immigrant particles into the local particle list is costly, increasing the number of processors has a big effect on reducing this cost.
+
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
 \caption{}
 \label{mpips_speedup_vs_p}
 \end{figure}
+
+Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simulating 10 000 particles on different numbers of processors. As the number of processors is increased, each processor does less computation per cycle. However, the number of MPI messages sent by each processor is constant. Therefore, as {\em p} increases, a smaller portion of the time is spent computing, and a greater portion is spent communicating. The synchronization curve indicates the time spent in the MPI {\em Waitall} operation. This is always almost 0\%, as the actual synchronization is performed by the blocking MPI receive calls.
 
 \begin{figure}[!h]
 \centering
