@@ -26,6 +26,7 @@ __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, p
     double top_y = (mb_y + 1) * mb_height;
 
     // Iterate through array of particles
+    mb_list[thread_id].n = 0;
     for(int i = 0; i < n; i++)
     {
         // If particle lies within this microblock, add it
