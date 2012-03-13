@@ -117,10 +117,6 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
   if(tid >= n) return;
 
   particle_t * p = &particles[tid];
-  p->x = 0.5;
-  p->y = 0.5;
-
-  /*
   
     //
     //  slightly simplified Velocity Verlet integration
@@ -144,7 +140,6 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
         p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
         p->vy = -(p->vy);
     }
-  */
 }
 
 
