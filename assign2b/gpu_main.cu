@@ -34,7 +34,8 @@ int main( int argc, char **argv ) {
   int n = read_int(argc, argv, "-n", 1000);
 
   // Initialize CPU Particle List
-  particle_t *particles = (particle_t*) malloc(n * sizeof(particle_t));
+  particle_t *particles;
+  cudaMallocHost(&particles, n * sizeof(particle_t));
   double size = set_size(n);
   init_particles(n, particles);
 
