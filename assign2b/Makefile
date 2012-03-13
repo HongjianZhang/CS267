@@ -17,13 +17,15 @@ all:	$(TARGETS)
 
 serial: serial.o common.o
 	$(CC) -o $@ $(LIBS) serial.o common.o
-gpu: gpu.o common.o
-	$(CC) -o $@ $(NVCCLIBS) gpu.o common.o
+gpu: gpu.o common.o gpu_main.o
+	$(CC) -o $@ $(NVCCLIBS) gpu.o common.o gpu_main.o
 
 serial.o: serial.cu common.h
 	$(CC) -c $(CFLAGS) serial.cu
 gpu.o: gpu.cu common.h
 	$(CC) -c $(NVCCFLAGS) gpu.cu
+gpu_main.o: gpu_main.cu common.h
+	$(CC) -c $(NVCCFLAGS) gpu_main.cu
 common.o: common.cu common.h
 	$(CC) -c $(CFLAGS) common.cu
 

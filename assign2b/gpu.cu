@@ -71,16 +71,16 @@ __global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_col
         return;
 		
 	int neighbors[8];
-	neighbors[p_sw] = ((mb_x != 0)             && (mb_y != 0)        ) ? (&microblocks[(mb_y-1)*mb_cols + (mb_x-1)]) : (NO_MB);
-	neighbors[p_s ] = (                           (mb_y != 0)        ) ? (&microblocks[(mb_y-1)*mb_cols + (mb_x  )]) : (NO_MB);
-	neighbors[p_se] = ((mb_x != mb_cols-1)     && (mb_y != 0)        ) ? (&microblocks[(mb_y-1)*mb_cols + (mb_x+1)]) : (NO_MB);
+	neighbors[p_sw] = ((mb_x != 0)             && (mb_y != 0)        ) ? ((mb_y-1)*mb_cols + (mb_x-1)) : (NO_MB);
+	neighbors[p_s ] = (                           (mb_y != 0)        ) ? ((mb_y-1)*mb_cols + (mb_x  )) : (NO_MB);
+	neighbors[p_se] = ((mb_x != mb_cols-1)     && (mb_y != 0)        ) ? ((mb_y-1)*mb_cols + (mb_x+1)) : (NO_MB);
 
-	neighbors[p_w ] = ((mb_x != 0)                                   ) ? (&microblocks[(mb_y  )*mb_cols + (mb_x-1)]) : (NO_MB);
-	neighbors[p_e ] = ((mb_x != mb_cols-1)                           ) ? (&microblocks[(mb_y  )*mb_cols + (mb_x+1)]) : (NO_MB);
+	neighbors[p_w ] = ((mb_x != 0)                                   ) ? ((mb_y  )*mb_cols + (mb_x-1)) : (NO_MB);
+	neighbors[p_e ] = ((mb_x != mb_cols-1)                           ) ? ((mb_y  )*mb_cols + (mb_x+1)) : (NO_MB);
 
-	neighbors[p_nw] = ((mb_x != 0)             && (mb_y != mb_rows-1)) ? (&microblocks[(mb_y+1)*mb_cols + (mb_x-1)]) : (NO_MB);
-	neighbors[p_n ] = (                           (mb_y != mb_rows-1)) ? (&microblocks[(mb_y+1)*mb_cols + (mb_x  )]) : (NO_MB);
-	neighbors[p_ne] = ((mb_x != mb_cols-1)     && (mb_y != mb_rows-1)) ? (&microblocks[(mb_y+1)*mb_cols + (mb_x+1)]) : (NO_MB);
+	neighbors[p_nw] = ((mb_x != 0)             && (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x-1)) : (NO_MB);
+	neighbors[p_n ] = (                           (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x  )) : (NO_MB);
+	neighbors[p_ne] = ((mb_x != mb_cols-1)     && (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x+1)) : (NO_MB);
 	
 	for(int i = 0; i < mb_list[thread_id].n; ++i)
 	{

@@ -34,13 +34,14 @@ int main( int argc, char **argv ) {
   int n = read_int(argc, argv, "-n", 1000);
 
   // Initialize CPU Particle List
-  particle_t *particles = (particle_t*) malloc(n * sizeof(particle_t));
-  set_size(n);
+  particle_t *particles;
+  cudaMallocHost(&particles, n * sizeof(particle_t));
+  double size = set_size(n);
   init_particles(n, particles);
 
   // Initialize GPU Particle List
   particle_t* gpu_particles;
-  cudaMalloc(&d_gpu_particles, n * sizeof(particle_t));
+  cudaMalloc(&gpu_particles, n * sizeof(particle_t));
   cudaThreadSynchronize();
 
   // Determine number of blocks
@@ -67,13 +68,13 @@ int main( int argc, char **argv ) {
     int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
 
     // Distribute particles into microblocks
-    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n);
+    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
       
     // Compute Forces
-    compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n);
+    compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
               
     // Move particles
-    move_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, n, size);
+    move_gpu <<< blks, NUM_THREADS >>> (gpu_particles, n, size);
 
     // If save desired      
     if( fsave && (step%SAVEFREQ) == 0 ) {
