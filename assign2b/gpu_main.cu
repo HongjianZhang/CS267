@@ -68,7 +68,7 @@ int main( int argc, char **argv ) {
     int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
 
     // Distribute particles into microblocks
-    //distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
+    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
       
     // Compute Forces
     //compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
