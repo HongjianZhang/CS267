@@ -64,25 +64,90 @@
 
 \section{Introduction}
 
-\section{Desciption of Algorithms}
+The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using micro-blocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP and Pthreads frameworks.
 
-\subsection{Serial Sweep and Prune}
+Each of these serial and parallel algorithms are described in Section \ref{algorithm-section}, while their performance is analyzed in Section \ref{results-section}. Finally, Section \ref{conclusion-section} draws conclusions from these results.
+
+\section{Description of Algorithms}
+\label{algorithm-section}
+
+The micro-blocks and prune-and-sweep algorithms for collision detection are described below. This is then followed by a discussion of how these algorithms were extended to parallel implementations.
 
 \subsection{Serial Micro-blocks}
 
+\subsection{Serial Sweep and Prune}
+
+\subsection{MPI using Micro-blocks}
+
 \subsection{MPI using Sweep and Prune}
+
+The physical particle space is divided into a 2D grid, with each block in the grid assigned to a different processor. Initially, processor 0 broadcasts all the particles to all other processors. Each processor then selects the particles that fall within its ``physical'' boundaries, and adds these particles to a local, sorted, particle list.
+
+After the initialization stage, the main loop performs following operations, in order. Note that each processor has a list of its own particles, as well as the ghost particles that lie in the region immediately surrounding the processor.
+\begin{itemize}
+\item Calculate the forces on local particles, due to other local particles, as well as ghost particles.
+\item Move the local particles, using the sweep and prune algorithm to determine collisions between the local and ghost particles.
+\item Determine which local particles have moved outside the boundaries of this processor. Use MPI to send these emigrant particles to the relevant neighboring processor. Similarly, immigrant particles, which have now moved into this processor's space, are received from neighbors and added to the local sorted list.
+\item Determine which local particles lie near the (inside) boundary of this processor. These are the ghost particles, and are sent to neigboring processors in MPI messages.
+\item Receive ghost particles from neighboring processors, and sort them into the local particle list.
+\end{itemize}
+
+Emmigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI Waitall command is also used.
+
+Besides determining the emigrant particles that must leave the processor, each processor also determines which particles lie near...
+
+lie within cell, near the border (i.e. the ghost region), three lists are compiled. Moved, new, deleted. Send async to neighbors.
+
+Do blocking read from neighbors to receive ghost lists. Either update position, add or remove. Since blocks large, particles should remain ghosts for number of cycles. By updating position, O(1) work is required in moving to new position.
+
+If the results must be saved, an MPI Gather operation is used to send all the particles to processor 0, who writes them to file.
 
 \subsection{Pthreads using Sweep and Prune}
 
 \subsection{OpenMP using Micro-blocks}
 
 \section{Results}
+\label{results-section}
 
-\subsection{Serial Sweep and Prune}
+The performance of the algorithms described in the previous section is reported here. The scaling of execution time with number of particles and number of processors is given, as well as how this execution time is allocated to the different parts of each algorithm.
 
 \subsection{Serial Micro-blocks}
 
+\subsection{Serial Sweep and Prune}
+
+\subsection{MPI using Micro-blocks}
+
 \subsection{MPI using Sweep and Prune}
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
+\caption{}
+\label{mpips_time_vs_n}
+\end{figure}
+
+Figure \ref{mpips_speedup_vs_p} results are noisy. Could have been further improved by multiple runs and averaging results.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
+\caption{}
+\label{mpips_flops_vs_p}
+\end{figure}
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
+\caption{}
+\label{mpips_speedup_vs_p}
+\end{figure}
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
+\caption{}
+\label{mpips_timealloc_vs_p}
+\end{figure}
 
 \subsection{Pthreads using Sweep and Prune}
 
@@ -91,5 +156,6 @@
 \subsection{Performance Comparison of all Algorithms}
 
 \section{Conclusion}
+\label{conclusion-section}
 
 \end{document}
