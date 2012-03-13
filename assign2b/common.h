@@ -1,6 +1,8 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
+#include <stdio.h>
+
 inline int mymin( int a, int b ) { return a < b ? a : b; }
 inline int mymax( int a, int b ) { return a > b ? a : b; }
 
@@ -9,6 +11,8 @@ inline int mymax( int a, int b ) { return a > b ? a : b; }
 #define cutoff  0.01
 #define min_r   (cutoff/100)
 #define dt      0.0005
+
+#define NUM_THREADS 256
 
 //
 //  saving parameters
@@ -64,7 +68,7 @@ double read_timer( );
 //  simulation routines
 //
 
-void set_size( int n );
+double set_size( int n );
 void init_particles( int n, particle_t *p );
 void apply_force( particle_t &particle, particle_t &neighbor );
 void move( particle_t &p );
