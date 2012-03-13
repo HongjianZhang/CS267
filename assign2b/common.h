@@ -1,6 +1,20 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
+//================================================================================
+//====================== Microblock structure ====================================
+//================================================================================
+const int max_particles_per_mb = 10;
+typedef struct {
+  int n;
+  int p_idx[max_particles_per_mb];
+} microblock;
+
+__global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
+__device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor);
+__global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles);
+__global__ void move_gpu (particle_t * particles, int n, double size);
+
 inline int mymin( int a, int b ) { return a < b ? a : b; }
 inline int mymax( int a, int b ) { return a > b ? a : b; }
 

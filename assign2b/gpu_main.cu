@@ -5,15 +5,6 @@
 #include <cuda.h>
 #include "common.h"
 
-//================================================================================
-//====================== Microblock structure ====================================
-//================================================================================
-const int max_particles_per_mb = 10;
-typedef struct {
-  int n;
-  int p_idx[max_particles_per_mb];
-} microblock;
-
 // === microblock layout ===
 int mb_rows;
 int mb_cols;
@@ -57,8 +48,8 @@ int main( int argc, char **argv ) {
   mb_cols = 10;
 
   // Initialize GPU Microblock List
-  microblock* micro_blocks;
-  cudaMalloc(&micro_blocks, mb_rows * mb_cols * sizeof(microblock));
+  microblock* gpu_microblocks;
+  cudaMalloc(&gpu_microblocks, mb_rows * mb_cols * sizeof(microblock));
 
   // Synchronize mallocs
   cudaThreadSynchronize();
@@ -76,13 +67,13 @@ int main( int argc, char **argv ) {
     int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
 
     // Distribute particles into microblocks
-    distribute_gpu <<< blks, NUM_THREADS >>> (microblocks, mb_rows, mb_cols, gpu_particles, n);
+    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n);
       
     // Compute Forces
-    compute_forces_gpu <<< blks, NUM_THREADS >>> (microblocks, mb_rows, mb_cols, gpu_particles, n);
+    compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n);
               
     // Move particles
-    move_gpu <<< blks, NUM_THREADS >>> (microblocks, mb_rows, mb_cols, gpu_particles, n, size);
+    move_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, n, size);
 
     // If save desired      
     if( fsave && (step%SAVEFREQ) == 0 ) {
@@ -103,7 +94,7 @@ int main( int argc, char **argv ) {
   // Free memory
   free(particles);
   cudaFree(gpu_particles);
-  cudaFree(microblocks);
+  cudaFree(gpu_microblocks);
 
   // Close File
   if(fsave) fclose(fsave);

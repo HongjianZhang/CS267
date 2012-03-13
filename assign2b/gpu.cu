@@ -1,3 +1,6 @@
+#include <cuda.h>
+#include "common.h"
+
 //
 // Responsible for scanning through the particle list and adding the appropriate particle indices to each microblock.
 // Don't forget to set microblock.n also.
@@ -5,9 +8,10 @@
 __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size)
 {
     // Get X and Y co-ordinate of microblock
-    int mb_x = threadIdx.x + blockIdx.x * blockDim.x;
-    int mb_y = threadIdx.y + blockIdx.y * blockDim.y;
-    int thread_id = mb_y * mb_cols + mb_x;
+	int thread_id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    int mb_x = thread_id % mb_cols;
+    int mb_y = thread_id / mb_cols;
 
     // Make sure that we have a valid microblock to process
     if((mb_x >= mb_cols) || (mb_y >= mb_rows))
@@ -57,9 +61,10 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
 __global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles)
 {
     // Get X and Y co-ordinate of microblock
-    int mb_x = threadIdx.x + blockIdx.x * blockDim.x;
-    int mb_y = threadIdx.y + blockIdx.y * blockDim.y;
-    int thread_id = mb_y * mb_cols + mb_x;
+	int thread_id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    int mb_x = thread_id % mb_cols;
+    int mb_y = thread_id / mb_cols;
 
     // Make sure that we have a valid microblock to process
     if((mb_x >= mb_cols) || (mb_y >= mb_rows))
@@ -107,7 +112,6 @@ __global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_col
 
 __global__ void move_gpu (particle_t * particles, int n, double size)
 {
-
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if(tid >= n) return;
