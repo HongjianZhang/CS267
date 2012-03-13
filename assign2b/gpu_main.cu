@@ -68,10 +68,10 @@ int main( int argc, char **argv ) {
     int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
 
     // Distribute particles into microblocks
-    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
+    //distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
       
     // Compute Forces
-    compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
+    //compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
               
     // Move particles
     move_gpu <<< blks, NUM_THREADS >>> (gpu_particles, n, size);
@@ -93,7 +93,7 @@ int main( int argc, char **argv ) {
   printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
 
   // Free memory
-  free(particles);
+  cudaFreeHost(particles);
   cudaFree(gpu_particles);
   cudaFree(gpu_microblocks);
 
