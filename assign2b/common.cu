@@ -45,37 +45,38 @@ double set_size( int n )
 //
 void init_particles( int n, particle_t *p )
 {
-    srand48( time( NULL ) );
+  srand48(1000);
+  //    srand48( time( NULL ) );
         
-    int sx = (int)ceil(sqrt((double)n));
-    int sy = (n+sx-1)/sx;
-    
-    int *shuffle = (int*)malloc( n * sizeof(int) );
-    for( int i = 0; i < n; i++ )
-        shuffle[i] = i;
-    
-    for( int i = 0; i < n; i++ ) 
-    {
-        //
-        //  make sure particles are not spatially sorted
-        //
-        int j = lrand48()%(n-i);
-        int k = shuffle[j];
-        shuffle[j] = shuffle[n-i-1];
-        
-        //
-        //  distribute particles evenly to ensure proper spacing
-        //
-        p[i].x = size*(1.+(k%sx))/(1+sx);
-        p[i].y = size*(1.+(k/sx))/(1+sy);
-
-        //
-        //  assign random velocities within a bound
-        //
-        p[i].vx = drand48()*2-1;
-        p[i].vy = drand48()*2-1;
-    }
-    free( shuffle );
+  int sx = (int)ceil(sqrt((double)n));
+  int sy = (n+sx-1)/sx;
+  
+  int *shuffle = (int*)malloc( n * sizeof(int) );
+  for( int i = 0; i < n; i++ )
+    shuffle[i] = i;
+  
+  for( int i = 0; i < n; i++ ) 
+  {
+    //
+    //  make sure particles are not spatially sorted
+    //
+    int j = lrand48()%(n-i);
+    int k = shuffle[j];
+    shuffle[j] = shuffle[n-i-1];
+      
+    //
+    //  distribute particles evenly to ensure proper spacing
+    //
+    p[i].x = size*(1.+(k%sx))/(1+sx);
+    p[i].y = size*(1.+(k/sx))/(1+sy);
+      
+    //
+    //  assign random velocities within a bound
+    //
+    p[i].vx = drand48()*2-1;
+    p[i].vy = drand48()*2-1;
+  }
+  free( shuffle );
 }
 
 //
@@ -141,7 +142,8 @@ void save( FILE *f, int n, particle_t *p )
         first = false;
     }
     for( int i = 0; i < n; i++ )
-        fprintf( f, "%12.10f %12.10f\n", p[i].x, p[i].y );
+      fprintf(f, "%10.8f %10.8f\n", p[i].x, p[i].y);
+    //        fprintf( f, "%12.10f %12.10f\n", p[i].x, p[i].y );
 }
 
 //
