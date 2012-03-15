@@ -53,7 +53,7 @@
 
 %%% The "real" document content comes below...
 
-\title{CS267 Assignment 2: Part 1}
+\title{CS267 Assignment 2: Parts 1 and 2}
 \author{Patrick Li, Simon Scott, Stephen Twigg}
 %\date{} % Activate to display a given date or no date (if empty),
          % otherwise the current date is printed 
@@ -64,7 +64,7 @@
 
 \section{Introduction}
 
-The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using micro-blocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP and Pthreads frameworks.
+The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using micro-blocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP, Pthreads and CUDA frameworks.
 
 Each of these serial and parallel algorithms are described in Section \ref{algorithm-section}, while their performance is analyzed in Section \ref{results-section}. Finally, Section \ref{conclusion-section} draws conclusions from these results.
 
@@ -103,6 +103,14 @@ If the results must be saved, an MPI Gather operation is used to send all the pa
 \subsection{Pthreads using Sweep and Prune}
 
 \subsection{OpenMP using Micro-blocks}
+
+\subsection{CUDA using Micro-blocks}
+
+\subsubsection{The General Algorithm}
+
+\subsubsection{Synchronization Techniques}
+
+\subsubsection{GPU-Specific Optimizations}
 
 \section{Results}
 \label{results-section}
@@ -161,9 +169,15 @@ Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simu
 
 \subsection{OpenMP using Micro-blocks}
 
+\subsection{CUDA using Micro-blocks}
+
 \subsection{Performance Comparison of all Algorithms}
 
-\section{Conclusion}
+\section{Discussion and Conclusion}
 \label{conclusion-section}
+
+\subsection{The Strengths and Weaknesses of the GPU Architecture}
+
+\subsection{Final Conclusions}
 
 \end{document}
