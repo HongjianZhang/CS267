@@ -137,7 +137,7 @@ void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, int max_particles)
         if(mycell->neighbors[i] == NONE) continue;
 
         // Perform blocking read from neighbor
-        MPI_Recv (received_ghosts+total_received, (max_particles-total_received), PARTICLE, mycell->neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status); 
+        MPI_Recv (received_ghosts+total_received, (max_particles-total_received), PARTICLE, mycell->neighbors[i], GHOST_TAG, MPI_COMM_WORLD, &status);
 
         MPI_Get_count(&status, PARTICLE, &num_particles_rcvd);
 		total_received += num_particles_rcvd;
@@ -172,5 +172,6 @@ void receive_ghost_packets(mpi_cell* mycell, ppile* ghost, int max_particles)
 	}
 
     // Make sure that all previous ghost messages have been sent, as we need to reuse the buffers
-    MPI_Waitall(mycell->num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
+//    MPI_Waitall(mycell->num_neighbors, mpi_ghost_requests, MPI_STATUSES_IGNORE);
+	MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -191,5 +191,6 @@ void receive_immigrants(mpi_cell* mycell, microblock* microblocks, plist* local,
 	}
 
 	// Make sure that all previous emigrant messages have been sent, as we need to reuse the buffers
-	MPI_Waitall(mycell->num_neighbors, mpi_em_requests, MPI_STATUSES_IGNORE);
+//	MPI_Waitall(mycell->num_neighbors, mpi_em_requests, MPI_STATUSES_IGNORE);
+	MPI_Barrier(MPI_COMM_WORLD);
 }
