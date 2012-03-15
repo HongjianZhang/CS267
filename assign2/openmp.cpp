@@ -7,7 +7,7 @@
 #include "common.h"
 #include "microblock.h"
 
-#define PAT_PROFILING 2
+#define PAT_PROFILING 0
 
 const double micro_length  = cutoff*2;
 const int default_mbuf_depth = 4;
