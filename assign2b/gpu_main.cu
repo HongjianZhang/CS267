@@ -75,16 +75,17 @@ int main( int argc, char **argv ) {
 
   // Start Simulation
   double simulation_time = read_timer();
-  for(int step = 0; step < NSTEPS; step++) {    
-    // Compute Forces
-    compute_forces_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
+  for(int step = 0; step < NSTEPS; step++)
+  {    
+    // Compute Forces (one kernel per particle)
+    compute_forces_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, gpu_microblocks, mb_rows, mb_cols);
     cudaThreadSynchronize();
               
-    // Move particles
+    // Move particles (one kernel per particle)
     move_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, size);
     cudaThreadSynchronize();
 
-    // Migrate particles
+    // Migrate particles (one kernel per microblock)
     migrate_particles_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
     cudaThreadSynchronize();
 

@@ -31,6 +31,7 @@ typedef struct
   double vy;
   double ax;
   double ay;
+  int    mb_idx;
 } particle_t;
 
 //================================================================================
@@ -53,7 +54,7 @@ typedef struct {
 //================================================================================
 __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
 __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor);
-__global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles);
+__global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols);
 __global__ void move_gpu (particle_t * particles, int n, double size);
 __global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
 

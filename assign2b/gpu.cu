@@ -13,7 +13,7 @@ __device__ void add_pidx(microblock* mb, int pidx){
     //If it was INVALID
     if(is_active == INVALID){
       mb->p_idx[i] = pidx;
-      mb->valid[i] = VALID;      
+      mb->valid[i] = VALID; 
       return;
     }
   }
@@ -64,9 +64,13 @@ __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, p
   //For each particle, i
   for(int i=0; i<n; i++){
     //If the particle is within my bounds
-    if(within_bounds(&particles[i], left_x, right_x, bottom_y, top_y)){
+    if(within_bounds(&particles[i], left_x, right_x, bottom_y, top_y))
+    {
       //Add the particle index, i, to my list
       add_pidx(&mb_list[thread_id], i);
+
+      //Set particle's mb index
+      particles[i].mb_idx = thread_id;
     }
   }
 }
@@ -90,13 +94,17 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
   particle.ay += coef * dy;
 }
 
-__global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles)
+__global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols)
 {
-  // Get X and Y co-ordinate of microblock
-  int thread_id = threadIdx.x + blockIdx.x * blockDim.x;
+  // Get thread (particle) ID
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  if(tid >= n) return;
 
-  int mb_x = thread_id % mb_cols;
-  int mb_y = thread_id / mb_cols;
+  particle_t * p = &particles[tid];
+
+  // Get X and Y co-ordinate of particle's microblock
+  int mb_x = p->mb_idx % mb_cols;
+  int mb_y = p->mb_idx / mb_cols;
 
   // Make sure that we have a valid microblock to process
   if((mb_x >= mb_cols) || (mb_y >= mb_rows))
@@ -114,39 +122,39 @@ __global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_col
   neighbours[p_n ] = (                           (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x  )) : (NO_MB);
   neighbours[p_ne] = ((mb_x != mb_cols-1)     && (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x+1)) : (NO_MB);
 
-  //For each active index
-  for(int i=0; i<max_particles_per_mb; i++)
-    if(mb_list[thread_id].valid[i] == VALID) {
+  p->ax = p->ay = 0;
 
-      //Get particle idx
-      int pidx = mb_list[thread_id].p_idx[i];
-      particles[pidx].ax = particles[pidx].ay = 0;
-		
-      // Collide with active particles in my block
-      for(int j=0; j<max_particles_per_mb; j++)
-        if(mb_list[thread_id].valid[j] == VALID){
-          //If I'm not myself
-          if(i != j){
-            int nidx = mb_list[thread_id].p_idx[j];
-            apply_force_gpu(particles[pidx], particles[nidx]);
-          }
-        }
+  // Collide with active particles in my block
+  for(int j=0; j<max_particles_per_mb; j++)
+  {
+    if(mb_list[p->mb_idx].valid[j] == VALID)
+    {
+      int nidx = mb_list[p->mb_idx].p_idx[j];
 
-      // For each active neighbouring block
-      for(int k=0; k<8; k++)
-        if(neighbours[k] != NO_MB){
-          // For each active particle in the neighbouring block
-          for(int j=0; j<max_particles_per_mb; j++){
-            //Get neighbour
-            microblock* n = &mb_list[neighbours[k]];
-            if(n->valid[j] == VALID){
-              int nidx = n->p_idx[j];
-              apply_force_gpu(particles[pidx], particles[nidx]);
-            }
-          }
-        }
+      // If not myself
+      if(nidx != tid) {
+        apply_force_gpu(*p, particles[nidx]);
+      }
     }
+  }
+
+  // For each active neighbouring block
+  for(int k=0; k<8; k++)
+  {
+    if(neighbours[k] != NO_MB) {
+      // For each active particle in the neighbouring block
+      for(int j=0; j<max_particles_per_mb; j++) {
+        //Get neighbour
+        microblock* n = &mb_list[neighbours[k]];
+        if(n->valid[j] == VALID) {
+          int nidx = n->p_idx[j];
+          apply_force_gpu(*p, particles[nidx]);
+        }
+      }
+    }
+  }
 }
+
 
 __global__ void move_gpu (particle_t * particles, int n, double size)
 {
@@ -229,6 +237,9 @@ __global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_
         //Neighbour to add to:
         microblock* neighbour = &mb_list[neighbour_y * mb_cols + neighbour_x];
         add_pidx(neighbour, pidx);
+        
+        //Update particle's own record of its mb
+        p->mb_idx = neighbour_y * mb_cols + neighbour_x;
       }
     }
   }
