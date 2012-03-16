@@ -112,6 +112,18 @@ If the results must be saved, an MPI Gather operation is used to send all the pa
 
 \subsubsection{GPU-Specific Optimizations}
 
+Simon TODO.
+
+Eliminate large global array, and store particles in local lists. Each processor uses locks to send particles to their new destination list.
+
+Have one large kernel, with barriers between stages, rather than 3 separate kernels.
+
+Use double2 to store x,y position, a, v.
+
+Thread per particle, not per mb, when calculating forces. Eliminates unused microblocks.
+
+Future work: Place local lists in shared memory. Blocking microblocks into same thread block. Load all particles into shared memory, much faster.
+
 \section{Results}
 \label{results-section}
 
@@ -131,7 +143,7 @@ If the MPI Sweep and Prune algorithm ran in purely O(n) time, one would expect t
 
 \begin{figure}[!h]
 \centering
-\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
 \caption{}
 \label{mpips_time_vs_n}
 \end{figure}
@@ -142,7 +154,7 @@ Other than these facts, not much else can be drawn from this plot, due to the un
 
 \begin{figure}[!h]
 \centering
-\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
 \caption{}
 \label{mpips_flops_vs_p}
 \end{figure}
@@ -151,7 +163,7 @@ Figure \ref{mpips_speedup_vs_p} shows the speedup achieved by adding more proces
 
 \begin{figure}[!h]
 \centering
-\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
 \caption{}
 \label{mpips_speedup_vs_p}
 \end{figure}
@@ -160,7 +172,7 @@ Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simu
 
 \begin{figure}[!h]
 \centering
-\includegraphics*[width=0.8\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
 \caption{}
 \label{mpips_timealloc_vs_p}
 \end{figure}
@@ -171,7 +183,18 @@ Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simu
 
 \subsection{CUDA using Micro-blocks}
 
+Simon TODO. Describe Figure~\ref{gpu_time_vs_n}. Give best fit curve that shows that time is linear function of n. Give maximum speedup.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.65\textwidth, viewport= 70 70 730 550]{figures/gpu_time_vs_n}
+\caption{}
+\label{gpu_time_vs_n}
+\end{figure}
+
 \subsection{Performance Comparison of all Algorithms}
+
+Simon TODO
 
 \section{Discussion and Conclusion}
 \label{conclusion-section}
