@@ -84,7 +84,7 @@ int main( int argc, char **argv ) {
     move_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, size);
 
     // Migrate particles (one kernel per microblock)
-    migrate_particles_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
+    //migrate_particles_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
 
     // If save desired      
     if( fsave && (step%SAVEFREQ) == 0 )
