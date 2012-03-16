@@ -34,6 +34,14 @@ typedef struct
   int    mb_idx;
 } particle_t;
 
+typedef struct 
+{
+  double2 pos;
+  double2 v;
+  double2 a;
+  int    mb_idx;
+} particle_gpu_t;
+
 //================================================================================
 //====================== Microblock structure ====================================
 //================================================================================
@@ -52,11 +60,11 @@ typedef struct {
 //================================================================================
 //========================= Kernels ==============================================
 //================================================================================
-__global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
-__device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor);
-__global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols);
-__global__ void move_gpu (particle_t * particles, int n, double size);
-__global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
+__global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_gpu_t* particles, int n, double phys_size);
+__device__ void apply_force_gpu(particle_gpu_t &particle, particle_t &neighbor);
+__global__ void compute_forces_gpu (particle_gpu_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols);
+__global__ void move_gpu (particle_gpu_t * particles, int n, double size);
+__global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_gpu_t* particles, int n, double phys_size);
 
 #define NO_MB -1
 
@@ -80,6 +88,7 @@ double read_timer( );
 
 double set_size( int n );
 void init_particles( int n, particle_t *p );
+void init_particles_gpu( int n, particle_gpu_t *p );
 void apply_force( particle_t &particle, particle_t &neighbor );
 void move( particle_t &p );
 
@@ -88,6 +97,7 @@ void move( particle_t &p );
 //
 FILE *open_save( char *filename, int n );
 void save( FILE *f, int n, particle_t *p );
+void save_gpu( FILE *f, int n, particle_gpu_t *p );
 
 //
 //  argument processing routines

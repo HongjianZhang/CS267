@@ -7,6 +7,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include "common.h"
+#include <cuda.h>
 
 double size;
 
@@ -81,6 +82,46 @@ void init_particles( int n, particle_t *p )
 }
 
 //
+//  Initialize the particle positions and velocities
+//
+void init_particles_gpu( int n, particle_gpu_t *p )
+{
+  srand48(1000);
+  //    srand48( time( NULL ) );
+        
+  int sx = (int)ceil(sqrt((double)n));
+  int sy = (n+sx-1)/sx;
+  
+  int *shuffle = (int*)malloc( n * sizeof(int) );
+  for( int i = 0; i < n; i++ )
+    shuffle[i] = i;
+  
+  for( int i = 0; i < n; i++ ) 
+  {
+    //
+    //  make sure particles are not spatially sorted
+    //
+    int j = lrand48()%(n-i);
+    int k = shuffle[j];
+    shuffle[j] = shuffle[n-i-1];
+      
+    //
+    //  distribute particles evenly to ensure proper spacing
+    //
+    p[i].pos = make_double2(size*(1.+(k%sx))/(1+sx), size*(1.+(k/sx))/(1+sy));
+      
+    //
+    //  assign random velocities within a bound
+    //
+    p[i].v = make_double2(0,0);
+    p[i].v.x = drand48()*2-1;
+    p[i].v.y =  drand48()*2-1;
+  }
+
+  free( shuffle );
+}
+
+//
 //  interact two particles
 //
 void apply_force( particle_t &particle, particle_t &neighbor )
@@ -145,6 +186,19 @@ void save( FILE *f, int n, particle_t *p )
     for( int i = 0; i < n; i++ )
       fprintf(f, "%10.8f %10.8f\n", p[i].x, p[i].y);
     //        fprintf( f, "%12.10f %12.10f\n", p[i].x, p[i].y );
+}
+
+void save_gpu( FILE *f, int n, particle_gpu_t *p )
+{
+    static bool first = true;
+    if( first )
+    {
+        fprintf( f, "%d %g\n", n, size );
+        first = false;
+    }
+    for( int i = 0; i < n; i++ )
+      //fprintf(f, "%10.8f %10.8f\n", p[i].pos.x, p[i].pos.y);
+      fprintf( f, "%12.10f %12.10f\n", p[i].pos.x, p[i].pos.y );
 }
 
 //

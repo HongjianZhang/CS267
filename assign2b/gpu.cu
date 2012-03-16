@@ -27,17 +27,17 @@ __device__ void remove_idx(microblock* mb, int i){
 //================================================================================
 //================================================================================
 
-__device__ int within_bounds(particle_t* p, double left_x, double right_x, double bottom_y, double top_y){
+__device__ int within_bounds(particle_gpu_t* p, double left_x, double right_x, double bottom_y, double top_y){
   return
-    p->x >= left_x && p->x < right_x &&
-    p->y >= bottom_y && p->y < top_y;
+    p->pos.x >= left_x && p->pos.x < right_x &&
+    p->pos.y >= bottom_y && p->pos.y < top_y;
 }
 
 //
 // Responsible for scanning through the particle list and adding the appropriate particle indices to each microblock.
 // Don't forget to set microblock.n also.
 //
-__global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size)
+__global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_gpu_t* particles, int n, double phys_size)
 {
   // Get X and Y co-ordinate of microblock
   int thread_id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -75,10 +75,10 @@ __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, p
   }
 }
 
-__device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
+__device__ void apply_force_gpu(particle_gpu_t &particle, particle_gpu_t &neighbor)
 {
-  double dx = neighbor.x - particle.x;
-  double dy = neighbor.y - particle.y;
+  double dx = neighbor.pos.x - particle.pos.x;
+  double dy = neighbor.pos.y - particle.pos.y;
   double r2 = dx * dx + dy * dy;
   if( r2 > cutoff*cutoff )
       return;
@@ -90,22 +90,22 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
   //  very simple short-range repulsive force
   //
   double coef = ( 1 - cutoff / r ) / r2 / mass;
-  particle.ax += coef * dx;
-  particle.ay += coef * dy;
+  particle.a.x += coef * dx;
+  particle.a.y += coef * dy;
 }
 
 
-__global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols)
+__global__ void compute_forces_gpu (particle_gpu_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols)
 {
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if(tid >= n) return;
 
-  particle_t * p = &particles[tid];
+  particle_gpu_t p = particles[tid];
 
   // Get X and Y co-ordinate of particle's microblock
-  int mb_x = p->mb_idx % mb_cols;
-  int mb_y = p->mb_idx / mb_cols;
+  int mb_x = p.mb_idx % mb_cols;
+  int mb_y = p.mb_idx / mb_cols;
 
   // Make sure that we have a valid microblock to process
   if((mb_x >= mb_cols) || (mb_y >= mb_rows))
@@ -123,18 +123,18 @@ __global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb
   neighbours[p_n ] = (                           (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x  )) : (NO_MB);
   neighbours[p_ne] = ((mb_x != mb_cols-1)     && (mb_y != mb_rows-1)) ? ((mb_y+1)*mb_cols + (mb_x+1)) : (NO_MB);
 
-  p->ax = p->ay = 0;
+  p.a.x = p.a.y = 0;
 
   // Collide with active particles in my block
   for(int j=0; j<max_particles_per_mb; j++)
   {
-    if(mb_list[p->mb_idx].valid[j] == VALID)
+    if(mb_list[p.mb_idx].valid[j] == VALID)
     {
-      int nidx = mb_list[p->mb_idx].p_idx[j];
+      int nidx = mb_list[p.mb_idx].p_idx[j];
 
       // If not myself
       if(nidx != tid) {
-        apply_force_gpu(*p, particles[nidx]);
+        apply_force_gpu(p, particles[nidx]);
       }
     }
   }
@@ -149,48 +149,54 @@ __global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb
         microblock* n = &mb_list[neighbours[k]];
         if(n->valid[j] == VALID) {
           int nidx = n->p_idx[j];
-          apply_force_gpu(*p, particles[nidx]);
+          apply_force_gpu(p, particles[nidx]);
         }
       }
     }
   }
+
+  // Copy particle p back to global array
+  particles[tid] = p;
 }
 
 
-__global__ void move_gpu (particle_t * particles, int n, double size)
+__global__ void move_gpu (particle_gpu_t * particles, int n, double size)
 {
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if(tid >= n) return;
 
-  particle_t * p = &particles[tid];
+  particle_gpu_t p = particles[tid];
   
-    //
-    //  slightly simplified Velocity Verlet integration
-    //  conserves energy better than explicit Euler method
-    //
-    p->vx += p->ax * dt;
-    p->vy += p->ay * dt;
-    p->x  += p->vx * dt;
-    p->y  += p->vy * dt;
+  //
+  //  slightly simplified Velocity Verlet integration
+  //  conserves energy better than explicit Euler method
+  //
+  p.v.x += p.a.x * dt;
+  p.v.y += p.a.y * dt;
+  p.pos.x  += p.v.x * dt;
+  p.pos.y  += p.v.y * dt;
 
-    //
-    //  bounce from walls
-    //
-    while( p->x < 0 || p->x > size )
-    {
-        p->x  = p->x < 0 ? -(p->x) : 2*size-p->x;
-        p->vx = -(p->vx);
-    }
-    while( p->y < 0 || p->y > size )
-    {
-        p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
-        p->vy = -(p->vy);
-    }
+  //
+  //  bounce from walls
+  //
+  while( p.pos.x < 0 || p.pos.x > size )
+  {
+      p.pos.x  = p.pos.x < 0 ? -(p.pos.x) : 2*size-p.pos.x;
+      p.v.x = -(p.v.x);
+  }
+  while( p.pos.y < 0 || p.pos.y > size )
+  {
+      p.pos.y  = p.pos.y < 0 ? -(p.pos.y) : 2*size-p.pos.y;
+      p.v.y = -(p.v.y);
+  }
+
+  // copy result back to global memory
+  particles[tid] = p;
 }
 
 
-__global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size)
+__global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_gpu_t* particles, int n, double phys_size)
 {
   // Get X and Y co-ordinate of microblock
   int thread_id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -217,7 +223,7 @@ __global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_
     if(mb->valid[i] == VALID){
       //Get current particle
       int pidx = mb->p_idx[i];
-      particle_t* p = &particles[pidx];
+      particle_gpu_t* p = &particles[pidx];
 
       //If particle is no longer within my bounds
       if(!within_bounds(p, left_x, right_x, bottom_y, top_y)){
@@ -228,8 +234,8 @@ __global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_
         //and add to the appropriate neighbour
         //neighbour to add it to.
         int neighbour_x, neighbour_y;
-        neighbour_x = p->x / mb_width;
-        neighbour_y = p->y / mb_height;
+        neighbour_x = p->pos.x / mb_width;
+        neighbour_y = p->pos.y / mb_height;
 
         //Make sure we don't leave the simulation space
         neighbour_x = min(max(0,neighbour_x), mb_cols-1);

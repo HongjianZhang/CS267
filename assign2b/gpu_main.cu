@@ -34,14 +34,14 @@ int main( int argc, char **argv ) {
   int n = read_int(argc, argv, "-n", 1000);
 
   // Initialize CPU Particle List
-  particle_t *particles;
-  cudaMallocHost(&particles, n * sizeof(particle_t));
+  particle_gpu_t *particles;
+  cudaMallocHost(&particles, n * sizeof(particle_gpu_t));
   double size = set_size(n);
-  init_particles(n, particles);
+  init_particles_gpu(n, particles);
 
   // Initialize GPU Particle List
-  particle_t* gpu_particles;
-  cudaMalloc(&gpu_particles, n * sizeof(particle_t));
+  particle_gpu_t* gpu_particles;
+  cudaMalloc(&gpu_particles, n * sizeof(particle_gpu_t));
   cudaThreadSynchronize();
 
   // Determine number of blocks
@@ -61,7 +61,7 @@ int main( int argc, char **argv ) {
 
   // Copy the particles to the GPU
   double copy_time = read_timer();
-  cudaMemcpy(gpu_particles, particles, n * sizeof(particle_t), cudaMemcpyHostToDevice);
+  cudaMemcpy(gpu_particles, particles, n * sizeof(particle_gpu_t), cudaMemcpyHostToDevice);
   cudaThreadSynchronize();
   copy_time = read_timer( ) - copy_time;
 
@@ -92,8 +92,8 @@ int main( int argc, char **argv ) {
       cudaThreadSynchronize();
 
       // Copy the particles back to the CPU
-      cudaMemcpy(particles, gpu_particles, n * sizeof(particle_t), cudaMemcpyDeviceToHost);
-      save(fsave, n, particles);
+      cudaMemcpy(particles, gpu_particles, n * sizeof(particle_gpu_t), cudaMemcpyDeviceToHost);
+      save_gpu(fsave, n, particles);
     }
   }
 
