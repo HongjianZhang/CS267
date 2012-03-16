@@ -323,19 +323,18 @@ to EMPTY.
 The following GPU-specific optimizations were attempted:
 
 \begin{itemize}
-\item {\em Store particles in local lists: } Eliminate large global array, and store particles in local lists. Each processor uses locks to send particles to their new destination list.
+\item {\em Particle migration: } In the initial algorithm, each micro-block thread scanned the global particle list every cycle, checking the location of each particle, and adding the appropriate particles to the micro-block's particle list. This meant that the particle lists were rebuilt from scratch every cycle. Once we figured out how to use atomic operations, each microblock instead migrated emigrant particles to their new micro-block when they moved. Since only a small fraction of the particles move across micro-block boundaries each cycle, this meant that the particle lists did not have to be rebuilt every cycle.
 
-\item {\em Single kernel: } Have one large kernel, with barriers between stages, rather than 3 separate kernels.
+\item {\em Single kernel: } Currently, three separate kernels are used to compute forces, move particles, and migrate particles. An attempt was made to combine these three kernels into a single macro-kernel, with {\em \_\_sync\_threads()} operations between the compute, move and migrate stages of computation.
 
-\item {\em Vector datatypes: } Use double2 to store x,y position, a, v.
+\item {\em Vector datatypes: } The particle position, velocity and acceleration values are stored using {\em double2} vector datatypes, to coalesce memory accesses.
 
-\item {\em Per-particle threads: } Thread per particle, not per mb, when calculating forces. Eliminates unused microblocks.
+\item {\em Per-particle threads for calculating forces: } Initially, when computing forces, a separate thread was launched for each micro-block. This thread computed the forces between all the particles in the micro-block, and the neighboring microblocks. The disadvantage of this is that the threads that are launched for empty microblocks are wasted computation. Therefore, a thread is instead launched for every particle in the system. This thread determines its micro-block, and computes the forces between itself and all other particles in its (and neighboring) microblock.
 
-\item {\em Future work: shared memory: } Place local lists in shared memory. Blocking microblocks into same thread block. Load all particles into shared memory, much faster.
+\item {\em Future work: shared memory: } A future optimization to the force calculation would be to arrange the thread launches so that all particles in a ``macro-block'' of micro-blocks run in the same thread block (or physical streaming multiprocessor). Each thread would then load its particle data from global memory into the shared memory. Since all the particles on the streaming multiprocessor are located near each other, they can read the position of all surrounding particles directly from shared memory. This would speed up memory accesses many-fold, and potentially speed up computation 2X-4X.
 
 \end{itemize}
 
-Simon TODO
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
