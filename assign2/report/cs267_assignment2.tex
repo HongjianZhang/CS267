@@ -29,6 +29,8 @@
 \usepackage{paralist} % very flexible & customisable lists (eg. enumerate/itemize, etc.)
 \usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
 \usepackage{subfig} % make it possible to include more than one captioned figure/table in a single float
+\usepackage{amsmath}
+\usepackage{amssymb}
 % These packages are all incorporated in the memoir class to one degree or another...
 
 %%% HEADERS & FOOTERS
@@ -76,6 +78,92 @@ The micro-blocks and prune-and-sweep algorithms for collision detection are desc
 \subsection{Serial Micro-blocks}
 
 \subsection{Serial Sweep and Prune}
+Particle simulations with only near-field effects have two major characteristics
+that can be exploited when optimizing for performance:
+\begin{enumerate}
+\item Spatial Locality: A particle only interacts with its nearby neighbours.
+\item Temporal Locality: If two particles are nearby in the current timestep,
+they are likely to be nearby in the next timestep.
+\end{enumerate}
+Sweep and Prune is a collision detection algorithm that exploits temporal
+locality. The algorithm internally maintains two sorted lists, one
+list containing the particles sorted by their x coordinates, and another
+list containing the same particles but sorted by their y coordinates.
+Particles that are distant with regards to their list position are
+unlikely to be colliding. Furthermore, if particles have not moved
+too great a distance since the last timestep then the lists will remain
+\emph{nearly} sorted. A sort routine with complexity proportional
+to the orderedness of the list, such as insertion sort, is then used
+to keep the lists sorted efficiently. 
+
+\subsubsection{Algorithm Initialization}
+
+Here, the simple case of collision detection in 1D is used to explain
+the basic algorithm. Generalizing the algorithm to $N$ dimensions
+is straightforward and discussed later. The algorithm initially starts
+with an initially empty list, $L$. For each object $o_{i}$, we add
+two tokens, $\text{MIN}_{i}$ and $\text{MAX}_{i}$, to the end of
+$L$, where $\text{MIN}_{i}$ is the tuple $(\text{MIN},i,x_{\text{i},\text{min}})$
+and $\text{MAX}_{i}$ is the tuple $(\text{MAX},i,x_{\text{i},\text{max}})$.
+$\text{MIN}$ and $\text{MAX}$ are labels that indicate the type
+of the token. $i\in\{1,\ldots,N\}$ is the index of the object. $x_{\text{i},\text{min}},x_{\text{i},\text{max}}\in\mathbb{R}$,
+are the x coordinates of the left-hand and right-hand boundaries of
+the object respectively. The algorithm also maintains a mapping $M$
+from unordered pairs of indices to booleans, $M:(i,j)\in\{1,\ldots,N\}^{2}\rightarrow\text{bool}$,
+that indicates whether object $i$ and $j$ are intersecting. $M$
+is initially false for every pair $i$ and $j$.
+
+\subsubsection{Update Step}
+
+To detection collisions, we use an insertion sort to sort L according
+to the x coordinates of the tokens. 
+
+\[
+\begin{aligned} & \text{for }k\text{ in }0\ldots2N\text{ do : }\\
+ & \quad m\text{ := }k\\
+ & \quad\text{while }m>1:\\
+ & \quad\quad\text{if }L_{m-1}.x<L_{m}.x:\\
+ & \quad\quad\quad\text{swap}(m,m-1)\\
+ & \quad\quad\quad m=m-1\\
+ & \quad\quad\text{else :}\\
+ & \quad\quad\quad\text{break}
+\end{aligned}
+\]
+where the function \emph{swap} interchanges the positions of token
+$m$ and token $m-1$, and updates the mapping $M$. If the $\text{MAX}$
+token of object $i$ is swapped to the right of the $\text{MIN}$
+token of object $j$ then we set $M(i,j)$ to $\text{true}$, to indicate
+that object $i$ is now intersecting object $j$. If the $\text{MIN}$
+token of object $i$ is swapped to the right of the $\text{MAX}$
+token of object $j$ then we set $M(i,j)$ to $\text{false}$ to indicate
+that object $i$ is no longer intersecting object $j$. 
+
+\[
+\begin{aligned} & \text{define swap }(i,j):\\
+ & \quad\text{if }L_{i}\text{.type}=\text{MIN and }L_{j}\text{.type}=\text{MAX}:\\
+ & \quad\quad M(i,j)=\text{true}\\
+ & \quad\text{else if }L_{i}\text{.type}=\text{MAX and }L_{j}\text{.type}=\text{MIN}:\\
+ & \quad\quad M(i,j)=\text{false}\\
+ & \quad\text{interchange }L_{i}\text{ with }L_{j}
+\end{aligned}
+\]
+At the end of the sort stage, and $L$ is properly sorted, $M(i,j)$
+will indicate whether the bounding boxes of object $i$ intersects
+with object $j$. The very first timestep will take $O(N^{2})$ time
+because there is no guarantee on the initial ordering of $L$. But
+for all subsequent timesteps, if the timestep is small and particles
+do not move excessively, the sort can be completed in close to $O(N)$
+computations. As a further possible optimization, a quick $O(n\cdot\text{log }n)$
+sort can be used to obtain the initial ordering for $L$. 
+
+\subsubsection{Generalization to N-D}
+
+To generalize the single dimensional sweep and prune algorithm to
+$N$ dimensions, we now maintain $N$ sorted lists. We note that the
+bounding boxes of objects $i$ and $j$ are overlapping if and only
+if they are overlapping in all $N$ dimensions. Thus at each timestep
+we perform $N$ sorts, and check that $M(i,j)=\text{true}$ for each
+dimension. 
 
 \subsection{MPI using Micro-blocks}
 
@@ -101,6 +189,69 @@ Each processor then performs three blocking reads from each of its neighbors, to
 If the results must be saved, an MPI Gather operation is used to send all the particles to processor 0, who writes them to file.
 
 \subsection{Pthreads using Sweep and Prune}
+The Sweep and Prune algorithm maps well onto sequential hardware but
+parallelization across multiple processors is difficult. We opt to
+parallelize sweep and prune by partitioning the simulation space into
+separate regions and assigning each region to a separate processor.
+Within a single processor we use the sequential sweep and prune algorithm. 
+
+
+\subsubsection{Regions}
+
+A region structure contains fields that indicate the extents of its
+boundaries, $\text{min}_{x},\text{max}_{x},\text{min}_{y},\text{max}_{y}$,
+pointers to its neighbouring regions, and a local sweep and prune
+structure for managing the particles local to the region. Particles
+may only be added or removed from a region using the \emph{add\_region\_particle
+}and \emph{remove\_region\_particle} functions.
+
+
+\subsubsection{Region Bounds}
+
+Regions have several bounds for the purposes of partitioning the workload
+amongst processors. $\text{min}_{x},\text{max}_{x},\text{min}_{y},\text{max}_{y}$
+define the \emph{responsibility bounds}. A region is responsible for
+correctly computing the forces and updating the positions of all particles
+within its \emph{responsibility bounds.} The \emph{send bounds }of
+a region starts at a distance of \emph{cutoff }interior from the border
+and continues to the border. Any particles within the \emph{send bounds
+}need to have its position sent to the neighbouring regions in order
+for the regions to accurately compute collisions along boundaries.
+The \emph{ghost bounds }of a region starts at the border and continues
+to a distance of \emph{cutoff }exterior to the border. The region
+will receive the positions of particles within the \emph{ghost bounds}
+from neighbouring regions to use for handling collisions along the
+boundaries.
+
+
+\subsubsection{Algorithm}
+
+Every region is run in its own thread of execution, and at every time
+step :
+\begin{enumerate}
+\item Determines which particles are in the \emph{send bounds} and need
+to be sent to their neighbours.
+\item Sends the particles to its neighbours. Particles are sent to each
+neighbour (N, NE, E, SE, S, SW, W, NW) in turn, with a synchronizing
+barrier after each. This barrier ensures that a region is receiving
+from only one thread at a time.
+\item Removes any particles that are outside its \emph{responsibility bounds.}
+\item Computes forces and updates the positions of all particles within
+its \emph{responsibility bounds.}
+\end{enumerate}
+The algorithm is summarized as :
+
+\[
+\begin{aligned} & \text{for timestep in }1\ldots\text{NSTEPS do :}\\
+ & \quad\text{send\_particles := in\_sending\_bounds(all particles)}\\
+ & \quad\text{barrier}\\
+ & \quad\text{for neighbour in [N, NE, E, SE, S, SW, W, NW] do :}\\
+ & \quad\quad\text{send\_to\_neighbour(neighbour, send\_particles)}\\
+ & \quad\quad\text{barrier}\\
+ & \quad\text{remove\_particles\_out\_of\_responsible\_bounds}\\
+ & \quad\text{barrier}
+\end{aligned}
+\]
 
 \subsection{OpenMP using Micro-blocks}
 
@@ -108,7 +259,47 @@ If the results must be saved, an MPI Gather operation is used to send all the pa
 
 \subsubsection{The General Algorithm}
 
-\subsubsection{Synchronization Techniques}
+\subsubsection{GPU Synchronization Techniques}
+After we update the positions of each particle, we need to check whether
+their new positions are still within the bounds of their microblocks.
+If not, then they need to be removed from the current microblock and
+added to another. Because each particle is assigned its own thread,
+a single microblock may have many threads attempting to add and remove
+particles from it simultaneously. To coordinate these additions and
+removals we use an atomic compare and swap operation with a valid
+array.
+
+Every microblock allocates an $M$ element slots array, $s$, that
+can store up to $M$ particles, and internally maintains an $M$ element
+valid array, $v$, that indicates the status of slot. Each element
+in $v$ may hold one of the following settings:
+\begin{itemize}
+\item EMPTY: This indicates that there is currently no particle stored in
+that slot.
+\item ADDING: This indicates that we are currently in the process of adding
+a particle to that slot.
+\item FULL: This indicates that there is a particle stored in the slot.
+\end{itemize}
+Adding a particle consists of scanning through and looking for an
+EMPTY slot. If found, then we set it's status to ADDING, and proceed
+to store the particle into the slot. After the particle is stored,
+we set the status of the slot to FULL. Adding a particle, $p$, is
+illustrated by the following pseudocode.
+
+\[
+\begin{aligned} & \text{for }i\text{ in }1\ldots M\text{ do :}\\
+ & \quad\text{v0}:=\text{cas}(v[i],\text{EMPTY},\text{ADDING})\\
+ & \quad\text{if v0 }=\text{EMPTY :}\\
+ & \quad\quad s[i]=p\\
+ & \quad\quad v[i]=\text{FULL}\\
+ & \quad\quad\text{break}
+\end{aligned}
+\]
+
+
+Removing a particle does not require any synchronization, and only
+requires that we set the appropriate element in the valid array, $v$,
+to EMPTY.
 
 \subsubsection{GPU-Specific Optimizations}
 
@@ -132,6 +323,46 @@ The performance of the algorithms described in the previous section is reported 
 \subsection{Serial Micro-blocks}
 
 \subsection{Serial Sweep and Prune}
+
+Figure \ref{plot:serial_t_v_n} shows how the execution time scales
+with the number of particles for the serial prune and sweep algorithm.
+Time is measured for $n=500,1000,10000,20000,\text{ and }40000$ particles
+and plotted on a log-log pot. Fitting a trendline through the points
+results in a line with slope \textasciitilde{}1.4. Although the total
+computation time is an order of magnitude lower than the naive $O(n^{2})$
+algorithm, the algorithm does not scale linearly with the number of
+particles. The Sweep and Prune algorithm scales with the orderedness
+of the x and y lists between frames and we see that as the number
+of particles increase, the lists are less likely to remain sorted. 
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/serial_t_v_n}
+\par\end{centering}
+
+\caption{Serial Sweep and Prune. Time versus Number of Particles.}
+\label{plot:serial_t_v_n}
+
+\end{figure}
+
+
+Figure \ref{plot:serial_flops_v_n} shows how the number of floating
+point operations scale with the number of particles, $n=500,1000,10000,20000,\text{ and }40000$.
+We see that as the number of particles increase the number of floating
+point operations decrease drastically. This is to be expected as the
+orderedness of the lists decrease with the increase in number of particles.
+Thus the execution time is increasingly dominated by the sort required
+by sweep and prune than by the force and position updates.
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/serial_flops_v_n}
+\par\end{centering}
+
+\caption{Serial Sweep and Prune. MFlops/sec versus Number of Particles.}
+\label{plot:serial_flops_v_n}
+\end{figure}
+
 
 \subsection{MPI using Micro-blocks}
 
@@ -178,6 +409,85 @@ Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simu
 \end{figure}
 
 \subsection{Pthreads using Sweep and Prune}
+Figure \ref{plot:thread_t_v_n} shows how the execution time scales
+with the number of particles for varying numbers of processors, $p=4,8,16,\text{ and }24$.
+Results are shown on a log-log plot. The plot clearly captures the
+amount of overhead involved with parallelization and the intersections
+of the lines show the cross-over point for the number of particles
+at which it is beneficial to increase to the next level of parallelism. 
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/thread_t_v_n}
+\par\end{centering}
+
+\caption{Threaded Sweep and Prune. Time versus Number of Particles.}
+\label{plot:thread_t_v_n}
+\end{figure}
+
+
+Figure \ref{plot:thread_speedup_v_p} shows the speed up in terms
+of execution time of the threaded prune and sweep code over the serial
+code. Because of the overhead involved in keeping track of particle
+regions and ghost particles, the threaded version starts off slower
+than the serial version for small numbers of particles. However for
+large numbers of particles, $n=40000$, we see a consistent linear
+speedup as we increase the number of processors. For a medium number
+of particles, $n=10000$, we see a speed up until $p=16$ at which
+point the communication costs dominate. 
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/thread_speedup_v_p}
+\par\end{centering}
+
+\caption{Threaded Sweep and Prune. Speed up over serial versus Number of Processors.}
+\label{plot:thread_speedup_v_p}
+\end{figure}
+
+
+Figure \ref{plot:thread_flops_v_p} shows how the number of floating
+point operations scales with the number of processors. As the number
+of processors increase the arithmetic intensity decreases indicating
+that the communication and synchronization costs are dominating the
+computation. We note that the arithmetic intensity for a small number
+of processors for $n=10000$ particles starts out higher than for
+$n=40000$ particles. This is due to the amount of time spent performing
+collision detection versus performing force and position updates. 
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/thread_flops_v_p}
+\par\end{centering}
+
+\caption{Threaded Sweep and Prune. MFlops/second versus Number of Processors.}
+\label{plot:thread_flops_v_p}
+\end{figure}
+
+
+Figure \ref{plot:thread_breakdown_10000} shows a breakdown of the
+execution time in terms of time spent doing computation, communication,
+and synchronization. For the threaded implementation, communication
+is defined as the time spent copying particle data from one region
+to another. Synchronization is defined as the amount of time spent
+waiting for threads to arrive at the same barrier. Computation is
+defined as the rest of the execution time that is not communication
+nor synchronization. We see that actual communication costs are negligible
+compared to synchronization costs. This may be due to our implementation
+choice of allowing regions to accept particles from only one thread
+at a time. This scheme requires 8 barriers to transmit ghost particles
+to neighbouring regions, as one barrier is needed after each send
+to the N, NE, E, SE, S, SW, W, and NW neighbours. 
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\paperwidth]{figures/thread_breakdown_10000}
+\par\end{centering}
+
+\caption{Threaded Sweep and Prune. Breakdown of Execution Time versus Number
+of Processors.}
+\label{plot:thread_breakdown_10000}
+\end{figure}
 
 \subsection{OpenMP using Micro-blocks}
 
@@ -200,6 +510,22 @@ Simon TODO
 \label{conclusion-section}
 
 \subsection{The Strengths and Weaknesses of the GPU Architecture}
+Optimization of our GPU implementation was significantly more difficult
+than our CPU implementations. This is due, in part, to the requirement
+for more explicit handling of both memory and execution. For example,
+\begin{itemize}
+\item The need to manually manage threads and thread blocks and understand
+how they map to underlying warps. For this reason, uses of loops and
+branches come with a considerable penalty and need to be carefully
+managed.
+\item The need to manually synchronize and transfer data with the CPU.
+\item The need to manually manage the memory hierarchy. The CPU's automatically
+managed cache was convenient for obtaining good performance with a
+small amount of work. In contrast, the GPU needs to be explicitly
+told to store data in fast memory, and transferring data between slow
+and fast memory must also be managed manually. We appreciated the
+control this allows us over data placement, but at the same time,
+missed the convenience of having an automatically handled cache.\end{itemize}
 
 \subsection{Final Conclusions}
 
