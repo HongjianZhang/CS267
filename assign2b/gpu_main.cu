@@ -13,7 +13,7 @@ int mb_cols;
 //======================== Main Driver ===========================================
 //================================================================================
 
-int main( int argc, char **argv ) {    
+int main( int argc, char **argv ) {
   // Synchronize with the CUDA runtime
   cudaThreadSynchronize();
 
@@ -45,12 +45,16 @@ int main( int argc, char **argv ) {
   cudaThreadSynchronize();
 
   // Determine number of blocks
-  mb_rows = 10;
-  mb_cols = 10;
+  double mb_size = 2 * cutoff;
+  mb_rows = (int)(size / mb_size);
+  mb_cols = (int)(size / mb_size);
 
   // Initialize GPU Microblock List
   microblock* gpu_microblocks;
   cudaMalloc(&gpu_microblocks, mb_rows * mb_cols * sizeof(microblock));
+
+  // Initialize CPU Microblock List
+  microblock* cpu_microblocks = (microblock*)malloc(mb_rows * mb_cols * sizeof(microblock));
 
   // Synchronize mallocs
   cudaThreadSynchronize();
@@ -61,23 +65,32 @@ int main( int argc, char **argv ) {
   cudaThreadSynchronize();
   copy_time = read_timer( ) - copy_time;
 
+  // Thread Block Structure
+  int blks_p = (n + NUM_THREADS - 1) / NUM_THREADS;
+  int blks_mb = (mb_rows * mb_cols + NUM_THREADS - 1) / NUM_THREADS;
+
+  // Distribute particles into microblocks
+  distribute_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
+  cudaThreadSynchronize();
+
   // Start Simulation
   double simulation_time = read_timer();
-  for(int step = 0; step < NSTEPS; step++) {
-    // Thread Block Structure
-    int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-
-    // Distribute particles into microblocks
-    distribute_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
-      
-    // Compute Forces
-    compute_forces_gpu <<< blks, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles);
+  for(int step = 0; step < NSTEPS; step++)
+  {    
+    // Compute Forces (one kernel per particle)
+    compute_forces_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, gpu_microblocks, mb_rows, mb_cols);
               
-    // Move particles
-    move_gpu <<< blks, NUM_THREADS >>> (gpu_particles, n, size);
+    // Move particles (one kernel per particle)
+    move_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, size);
+
+    // Migrate particles (one kernel per microblock)
+    migrate_particles_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
 
     // If save desired      
-    if( fsave && (step%SAVEFREQ) == 0 ) {
+    if( fsave && (step%SAVEFREQ) == 0 )
+    {
+      cudaThreadSynchronize();
+
       // Copy the particles back to the CPU
       cudaMemcpy(particles, gpu_particles, n * sizeof(particle_t), cudaMemcpyDeviceToHost);
       save(fsave, n, particles);
@@ -88,12 +101,12 @@ int main( int argc, char **argv ) {
   cudaThreadSynchronize();
   simulation_time = read_timer() - simulation_time;
 
-  // Output Statistics    
+  // Output Statistics
   printf( "CPU-GPU copy time = %g seconds\n", copy_time);
   printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
 
   // Free memory
-  free(particles);
+  cudaFreeHost(particles);
   cudaFree(gpu_particles);
   cudaFree(gpu_microblocks);
 

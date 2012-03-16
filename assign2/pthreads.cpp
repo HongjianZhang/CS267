@@ -108,7 +108,7 @@ region* alloc_region(int max_particles, int total_particles, double min_x, doubl
 
   //Create Send Queue
   r->send = (char*)malloc(max_particles * sizeof(char));
-  for(int i=0; i<total_particles; i++)
+  for(int i=0; i<max_particles; i++)
     r->send[i] = 0;
 
   //Initialize Neighbours

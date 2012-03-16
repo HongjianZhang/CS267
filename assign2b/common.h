@@ -17,7 +17,7 @@ inline int mymax( int a, int b ) { return a > b ? a : b; }
 //
 //  saving parameters
 //
-const int NSTEPS = 1000;
+const int NSTEPS = 100;
 const int SAVEFREQ = 10;
 
 //
@@ -31,33 +31,43 @@ typedef struct
   double vy;
   double ax;
   double ay;
+  int    mb_idx;
 } particle_t;
 
 //================================================================================
 //====================== Microblock structure ====================================
 //================================================================================
-const int max_particles_per_mb = 10;
+const int max_particles_per_mb = 8;
+
+//Possible values for valid array
+#define INVALID 0
+#define VALID 1
+#define NEWLY_ADDED 2
 
 typedef struct {
-  int n;
   int p_idx[max_particles_per_mb];
+  int valid[max_particles_per_mb];
 } microblock;
 
+//================================================================================
+//========================= Kernels ==============================================
+//================================================================================
 __global__ void distribute_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
 __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor);
-__global__ void compute_forces_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles);
+__global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols);
 __global__ void move_gpu (particle_t * particles, int n, double size);
+__global__ void migrate_particles_gpu (microblock* mb_list, int mb_rows, int mb_cols, particle_t* particles, int n, double phys_size);
 
 #define NO_MB -1
 
-const int p_sw = 0;
-const int p_s  = 1;
-const int p_se = 2;
-const int p_w  = 3;
-const int p_e  = 4;
-const int p_nw = 5;
-const int p_n  = 6;
-const int p_ne = 7;
+#define p_sw 0
+#define p_s  1
+#define p_se 2
+#define p_w  3
+#define p_e  4
+#define p_nw 5
+#define p_n  6
+#define p_ne 7
 
 //
 //  timing routines
