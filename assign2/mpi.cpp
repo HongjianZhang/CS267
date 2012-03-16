@@ -88,6 +88,7 @@ int main( int argc, char **argv )
 
 	distribute_particles(microblocks, mycell, local, particles, n);
 
+	MPI_Pcontrol( 1,"compute");
 	//
 	//  simulate a number of time steps
 	//
@@ -124,6 +125,7 @@ int main( int argc, char **argv )
 		}
     }
     simulation_time = read_timer( ) - simulation_time;
+	MPI_Pcontrol( -1,"compute");
     
     if( rank == 0 )
         printf( "n = %d, n_procs = %d, simulation time = %g s\n", n, n_proc, simulation_time );

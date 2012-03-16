@@ -1,23 +1,62 @@
 #PBS -V
-#PBS -l mppwidth=24
+#PBS -l mppwidth=240
 #PBS -l mppnppn=24
 #PBS -l mppdepth=1
-#PBS -l walltime=0:05:00
+#PBS -l walltime=0:15:00
 #PBS -o mpi24.stdout
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
-aprun -d 1 -n 4 -N 4 ./mpi -n 500 
+export IPM_REPORT=full
+aprun -d 1 -n 1 -N 1 ./mpi -n 500
+aprun -d 1 -n 1 -N 1 ./mpi -n 5000
+aprun -d 1 -n 1 -N 1 ./mpi -n 10000
+aprun -d 1 -n 1 -N 1 ./mpi -n 40000
+aprun -d 1 -n 1 -N 1 ./mpi -n 100000
+aprun -d 1 -n 1 -N 1 ./mpi -n 1000000
+
+aprun -d 1 -n 4 -N 4 ./mpi -n 500
+aprun -d 1 -n 4 -N 4 ./mpi -n 5000
 aprun -d 1 -n 4 -N 4 ./mpi -n 10000
 aprun -d 1 -n 4 -N 4 ./mpi -n 40000
 aprun -d 1 -n 4 -N 4 ./mpi -n 100000
+aprun -d 1 -n 4 -N 4 ./mpi -n 1000000
 
-aprun -d 1 -n 12 -N 12 ./mpi -n 500 
+aprun -d 1 -n 12 -N 12 ./mpi -n 500
+aprun -d 1 -n 12 -N 12 ./mpi -n 5000
 aprun -d 1 -n 12 -N 12 ./mpi -n 10000
 aprun -d 1 -n 12 -N 12 ./mpi -n 40000
 aprun -d 1 -n 12 -N 12 ./mpi -n 100000
+aprun -d 1 -n 12 -N 12 ./mpi -n 1000000
 
-aprun -d 1 -n 24 -N 24 ./mpi -n 500 
+aprun -d 1 -n 24 -N 24 ./mpi -n 500
+aprun -d 1 -n 24 -N 24 ./mpi -n 5000
 aprun -d 1 -n 24 -N 24 ./mpi -n 10000
 aprun -d 1 -n 24 -N 24 ./mpi -n 40000
 aprun -d 1 -n 24 -N 24 ./mpi -n 100000
+aprun -d 1 -n 24 -N 24 ./mpi -n 1000000
+
+aprun -d 1 -n 48 -N 24 ./mpi -n 500
+aprun -d 1 -n 48 -N 24 ./mpi -n 5000
+aprun -d 1 -n 48 -N 24 ./mpi -n 10000
+aprun -d 1 -n 48 -N 24 ./mpi -n 40000
+aprun -d 1 -n 48 -N 24 ./mpi -n 100000
+aprun -d 1 -n 48 -N 24 ./mpi -n 1000000
+
+aprun -d 1 -n 96 -N 24 ./mpi -n 5000
+aprun -d 1 -n 96 -N 24 ./mpi -n 10000
+aprun -d 1 -n 96 -N 24 ./mpi -n 40000
+aprun -d 1 -n 96 -N 24 ./mpi -n 100000
+aprun -d 1 -n 96 -N 24 ./mpi -n 1000000
+
+aprun -d 1 -n 120 -N 24 ./mpi -n 5000
+aprun -d 1 -n 120 -N 24 ./mpi -n 10000
+aprun -d 1 -n 120 -N 24 ./mpi -n 40000
+aprun -d 1 -n 120 -N 24 ./mpi -n 100000
+aprun -d 1 -n 120 -N 24 ./mpi -n 1000000
+
+aprun -d 1 -n 240 -N 24 ./mpi -n 5000
+aprun -d 1 -n 240 -N 24 ./mpi -n 10000
+aprun -d 1 -n 240 -N 24 ./mpi -n 40000
+aprun -d 1 -n 240 -N 24 ./mpi -n 100000
+aprun -d 1 -n 240 -N 24 ./mpi -n 1000000
