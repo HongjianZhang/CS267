@@ -79,18 +79,18 @@ int main( int argc, char **argv ) {
   {    
     // Compute Forces (one kernel per particle)
     compute_forces_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, gpu_microblocks, mb_rows, mb_cols);
-    cudaThreadSynchronize();
               
     // Move particles (one kernel per particle)
     move_gpu <<< blks_p, NUM_THREADS >>> (gpu_particles, n, size);
-    cudaThreadSynchronize();
 
     // Migrate particles (one kernel per microblock)
     migrate_particles_gpu <<< blks_mb, NUM_THREADS >>> (gpu_microblocks, mb_rows, mb_cols, gpu_particles, n, size);
-    cudaThreadSynchronize();
 
     // If save desired      
-    if( fsave && (step%SAVEFREQ) == 0 ) {
+    if( fsave && (step%SAVEFREQ) == 0 )
+    {
+      cudaThreadSynchronize();
+
       // Copy the particles back to the CPU
       cudaMemcpy(particles, gpu_particles, n * sizeof(particle_t), cudaMemcpyDeviceToHost);
       save(fsave, n, particles);

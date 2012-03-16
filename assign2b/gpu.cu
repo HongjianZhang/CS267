@@ -94,6 +94,7 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
   particle.ay += coef * dy;
 }
 
+
 __global__ void compute_forces_gpu (particle_t* particles, int n, microblock* mb_list, int mb_rows, int mb_cols)
 {
   // Get thread (particle) ID
