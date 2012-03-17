@@ -179,24 +179,22 @@ dimension.
 
 To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighbouring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
 
-To determine which particles need to be sent as ghosts to neighbouring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighbouring regions. 
-
-They were placed in a pile that can be `cleared' in O(1) time and the `ghost microblocks' were linked to simulation microblocks on simulation setup to prevent the needing complicated neighbor lookups during main computation.
+To determine which particles need to be sent as ghosts to neighbouring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighbouring regions. To prevent unnecessary copying of data we store only pointers to particles in the microblocks, and to prevent recomputing its neighbours on each frame each microblock also stores pointers to neighbouring microblocks.
 
 \subsection{MPI using Sweep and Prune}
 
 The physical particle space is divided into a 2D grid, with each block in the grid assigned to a different processor. Initially, processor 0 broadcasts all the particles to all other processors. Each processor then selects the particles that fall within its ``physical'' boundaries, and adds these particles to a local, sorted, particle list.
 
-After the initialization stage, the main loop performs following operations, in order. Note that each processor has a list of its own particles, as well as the ghost particles that lie in the region immediately surrounding the processor.
+After the initialization stage, the main loop performs the following operations, in order. Note that each processor has a list of its own particles, as well as the ghost particles that lie in the regions immediately surrounding the processor.
 \begin{itemize}
 \item Calculate the forces on local particles, due to other local particles, as well as ghost particles.
 \item Move the local particles, using the sweep and prune algorithm to determine collisions between the local and ghost particles.
 \item Determine which local particles have moved outside the boundaries of this processor. Use MPI to send these emigrant particles to the relevant neighboring processor. Similarly, immigrant particles, which have now moved into this processor's space, are received from neighbors and added to the local sorted list.
-\item Determine which local particles lie near the (inside) boundary of this processor. These are the ghost particles, and are sent to neigboring processors in MPI messages.
+\item Determine which local particles lie near the (inside) boundary of this processor. These are the ghost particles, and are sent to neighboring processors in MPI messages.
 \item Receive ghost particles from neighboring processors, and sort them into the local particle list.
 \end{itemize}
 
-Emmigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI {\em Waitall} command is also used.
+Emigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI {\em Waitall} command is also used.
 
 Besides determining the emigrant particles that must leave the processor, each processor also determines which local particles lie near the boundary of, but still within, the processor's space. The particles that lie within this ghost region are added to one of three lists: new ghost list (if they were not within the ghost region last cycle), moved ghost list (if they were within the ghost region last cycle) or the deleted ghost list (if a particle is no longer a ghost). These three lists are then sent to the appropriate neighbors, with an asynchronous MPI send.
 
@@ -206,7 +204,7 @@ If the results must be saved, an MPI Gather operation is used to send all the pa
 
 \subsection{Pthreads using Sweep and Prune}
 The Sweep and Prune algorithm maps well onto sequential hardware but
-parallelization across multiple processors is difficult. We opt to
+parallelization across multiple processors is difficult. We opted to
 parallelize sweep and prune by partitioning the simulation space into
 separate regions and assigning each region to a separate processor.
 Within a single processor we use the sequential sweep and prune algorithm. 
@@ -249,7 +247,7 @@ step :
 to be sent to their neighbours.
 \item Sends the particles to its neighbours. Particles are sent to each
 neighbour (N, NE, E, SE, S, SW, W, NW) in turn, with a synchronizing
-barrier after each. This barrier ensures that a region is receiving
+barrier after each. This barrier ensures that a region is receiving particles
 from only one thread at a time.
 \item Removes any particles that are outside its \emph{responsibility bounds.}
 \item Computes forces and updates the positions of all particles within
@@ -269,11 +267,11 @@ The algorithm is summarized as :
 \end{aligned}
 \]
 
-\subsection{OpenMP using Micro-blocks}
+\subsection{OpenMP using Microblocks}
 
 The OpenMP implementation uses the microblocks algorithm as it was found to be extremely easy to develop. In fact, the serial microblocks algorithm was chosen intentionally to serve as this a precursor to OpenMP. Only two major adjustments were required from the serial base. OpenMP pragmas were added to farm out particle collision detection/force calculation, particle movements, and particle migrations, all by microblock. Also, in the particle migration code, locks were added to the microblock particle lists to prevent possible race conditions when multiple threads add or remove particles from the same microblock simultaneously. Implicit barriers sit between the force calculation, movement, and migration stages due to features of the OpenMP for pragma feature.
 
-\subsection{CUDA using Micro-blocks}
+\subsection{CUDA using Microblocks}
 
 \subsubsection{The General Algorithm}
 
