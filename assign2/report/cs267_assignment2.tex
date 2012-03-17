@@ -357,21 +357,21 @@ Figure~\ref{serial_mb_n} verifies the serial microblocks implementation is of O(
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.65\textwidth]{figures/serial_mb_n.png}
-\caption{}
+\caption{Serial Microblocks Execution Time for Different Numbers of Particles}
 \label{serial_mb_n}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.65\textwidth]{figures/serial_mb_flops.png}
-\caption{}
+\caption{Floating Point Utilization for Serial Microblocks Code}
 \label{serial_mb_flops}
 \end{figure}
 
 \subsection{Serial Sweep and Prune}
 
 Figure \ref{plot:serial_t_v_n} shows how the execution time scales
-with the number of particles for the serial prune and sweep algorithm.
+with the number of particles for the serial sweep and prune algorithm.
 Time is measured for $n=500,1000,10000,20000,\text{ and }40000$ particles
 and plotted on a log-log pot. Fitting a trendline through the points
 results in a line with slope \textasciitilde{}1.4. Although the total
@@ -417,14 +417,14 @@ Figure~\ref{mpi_mb_n} shows the MPI microblocks implementation follows O(n) for 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/mpi_mb_n.png}
-\caption{}
+\caption{Execution Time vs Number of Particles for MPI Microblocks Code}
 \label{mpi_mb_n}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/mpi_mb_p.png}
-\caption{}
+\caption{Execution Time vs Number of Processors for MPI Microblocks Code}
 \label{mpi_mb_p}
 \end{figure}
 
@@ -433,14 +433,14 @@ Figure~\ref{mpi_mb_flops} explores how computational intensity (measured using I
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mpi_mb_flops.png}
-\caption{}
+\caption{Floating Point Utilization for MPI Microblocks Code}
 \label{mpi_mb_flops}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=1\textwidth]{figures/mpi_mb_rtime.png}
-\caption{}
+\caption{Allocation of Program Time for MPI Microblocks Implementation}
 \label{mpi_mb_rtime}
 \end{figure}
 
@@ -453,7 +453,7 @@ If the MPI Sweep and Prune algorithm ran in purely O(n) time, one would expect t
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
-\caption{}
+\caption{Processing Time vs Number of Particles for MPI Sweep and Prune}
 \label{mpips_time_vs_n}
 \end{figure}
 
@@ -464,7 +464,7 @@ Other than these facts, not much else can be drawn from this plot, due to the un
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
-\caption{}
+\caption{Floating Point Utilization for MPI Sweep and Prune}
 \label{mpips_flops_vs_p}
 \end{figure}
 
@@ -473,7 +473,7 @@ Figure \ref{mpips_speedup_vs_p} shows the speedup achieved by adding more proces
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
-\caption{}
+\caption{MPI Sweep and Prune Speedup relative to Serial Sweep and Prune}
 \label{mpips_speedup_vs_p}
 \end{figure}
 
@@ -482,7 +482,7 @@ Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simu
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
-\caption{}
+\caption{Allocation of Program Time for MPI Sweep and Prune}
 \label{mpips_timealloc_vs_p}
 \end{figure}
 
@@ -499,13 +499,13 @@ at which it is beneficial to increase to the next level of parallelism.
 \includegraphics[width=0.5\paperwidth]{figures/thread_t_v_n}
 \par\end{centering}
 
-\caption{Threaded Sweep and Prune. Time versus Number of Particles.}
+\caption{Pthreads Sweep and Prune. Time versus Number of Particles.}
 \label{plot:thread_t_v_n}
 \end{figure}
 
 
 Figure \ref{plot:thread_speedup_v_p} shows the speed up in terms
-of execution time of the threaded prune and sweep code over the serial
+of execution time of the threaded sweep and prune code over the serial
 code. Because of the overhead involved in keeping track of particle
 regions and ghost particles, the threaded version starts off slower
 than the serial version for small numbers of particles. However for
@@ -519,7 +519,7 @@ point the communication costs dominate.
 \includegraphics[width=0.5\paperwidth]{figures/thread_speedup_v_p}
 \par\end{centering}
 
-\caption{Threaded Sweep and Prune. Speed up over serial versus Number of Processors.}
+\caption{Pthreads Sweep and Prune. Speed up over serial versus Number of Processors.}
 \label{plot:thread_speedup_v_p}
 \end{figure}
 
@@ -538,7 +538,7 @@ collision detection versus performing force and position updates.
 \includegraphics[width=0.5\paperwidth]{figures/thread_flops_v_p}
 \par\end{centering}
 
-\caption{Threaded Sweep and Prune. MFlops/second versus Number of Processors.}
+\caption{Pthreads Sweep and Prune. MFlops/second versus Number of Processors.}
 \label{plot:thread_flops_v_p}
 \end{figure}
 
@@ -562,7 +562,7 @@ to the N, NE, E, SE, S, SW, W, and NW neighbors.
 \includegraphics[width=0.5\paperwidth]{figures/thread_breakdown_10000}
 \par\end{centering}
 
-\caption{Threaded Sweep and Prune. Breakdown of Execution Time versus Number
+\caption{Pthreads Sweep and Prune. Breakdown of Execution Time versus Number
 of Processors.}
 \label{plot:thread_breakdown_10000}
 \end{figure}
@@ -574,14 +574,14 @@ Figure~\ref{openmp_mb_n}  demonstrates the OpenMP microblocks implementation als
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/openmp_mb_n.png}
-\caption{}
+\caption{Execution Time vs Number of Particles for OpenMP Microblocks}
 \label{openmp_mb_n}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/openmp_mb_p.png}
-\caption{}
+\caption{Execution Time vs Number of Processors for OpenMP Microblocks}
 \label{openmp_mb_p}
 \end{figure}
 
@@ -590,14 +590,14 @@ Figure~\ref{openmp_mb_flops} shows that the floating point utilization (measured
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/openmp_mb_flops.png}
-\caption{}
+\caption{Floating Point Utilization for OpenMP Microblocks}
 \label{openmp_mb_flops}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=1\textwidth]{figures/openmp_mb_rtime.png}
-\caption{}
+\caption{Program Time Allocation for OpenMP Microblocks}
 \label{openmp_mb_rtime}
 \end{figure}
 
@@ -608,7 +608,7 @@ Figure~\ref{gpu_time_vs_n} shows the execution time of the particle simulation a
 \begin{figure}[!h]
 \centering
 \includegraphics*[width=0.65\textwidth, viewport= 70 70 730 550]{figures/gpu_time_vs_n}
-\caption{}
+\caption{Execution Times of Naive and Optimized GPU Algorithms}
 \label{gpu_time_vs_n}
 \end{figure}
 
@@ -626,9 +626,9 @@ The plot in Figure~\ref{gpu_time_vs_n} includes all of the positive-effect optim
 
 Serial sweep and prune is faster than serial microblocks for n$<$10 000. When n$\geq$10 000, the serial microblocks code is faster. This is because the sweep and prune algorithm is extremely efficient at detecting collisions when n is small, but when n is large, the O(n$^2$) sort balloons.
 
-The two MPI variants (prune and sweep, and microblocks) have similar performance for 500 and 1000 particles at all values of n. For more than 1000 particles, the microblocks variant is generally faster. The exception is when the number of processors is large, and hence number of particles per processor is small, as this reduces the amount of sorting that needs to be done on each processor. Both MPI variants are faster than the serial versions, as long as the total number of particles is greater than 500. If there are 500 particles or less, the serial code is faster, as there is insufficient computation to compensate for the MPI communication overhead.
+The two MPI variants (sweep and prune, and microblocks) have similar performance for 500 and 1000 particles at all values of n. For more than 1000 particles, the microblocks variant is generally faster. The exception is when the number of processors is large, and hence number of particles per processor is small, as this reduces the amount of sorting that needs to be done on each processor. Both MPI variants are faster than the serial versions, as long as the total number of particles is greater than 500. If there are 500 particles or less, the serial code is faster, as there is insufficient computation to compensate for the MPI communication overhead.
 
-The OpenMP implementation, using microblocks, is faster than the Pthreads implementation, which uses prune and sweep, for all particle and processor counts. However, the MPI microblocks implementation still outperforms the OpenMP implementation. This is due to three reasons:
+The OpenMP implementation, using microblocks, is faster than the Pthreads implementation, which uses sweep and prune, for all particle and processor counts. However, the MPI microblocks implementation still outperforms the OpenMP implementation. This is due to three reasons:
 \begin{enumerate}
 \item The MPI libraries for Hopper are able to handle intra-node messages fairly efficiently
 \item The MPI programming model also strict memory partitioning between nodes
