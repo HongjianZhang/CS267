@@ -175,32 +175,9 @@ if they are overlapping in all $N$ dimensions. Thus at each timestep
 we perform $N$ sorts, and check that $M(i,j)=\text{true}$ for each
 dimension. 
 
-\subsection{MPI using Microblocks}
+\subsection{OpenMP using Microblocks}
 
-To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighboring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
-
-To determine which particles need to be sent as ghosts to neighboring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighboring regions. To prevent unnecessary copying of data we store only pointers to particles in the microblocks, and to prevent recomputing its neighbors on each frame each microblock also stores pointers to neighboring microblocks.
-
-\subsection{MPI using Sweep and Prune}
-
-The physical particle space is divided into a 2D grid, with each block in the grid assigned to a different processor. Initially, processor 0 broadcasts all the particles to all other processors. Each processor then selects the particles that fall within its ``physical'' boundaries, and adds these particles to a local, sorted, particle list.
-
-After the initialization stage, the main loop performs the following operations, in order. Note that each processor has a list of its own particles, as well as the ghost particles that lie in the regions immediately surrounding the processor.
-\begin{itemize}
-\item Calculate the forces on local particles, due to other local particles, as well as ghost particles.
-\item Move the local particles, using the sweep and prune algorithm to determine collisions between the local and ghost particles.
-\item Determine which local particles have moved outside the boundaries of this processor. Use MPI to send these emigrant particles to the relevant neighboring processor. Similarly, immigrant particles, which have now moved into this processor's space, are received from neighbors and added to the local sorted list.
-\item Determine which local particles lie near the (inside) boundary of this processor. These are the ghost particles, and are sent to neighboring processors in MPI messages.
-\item Receive ghost particles from neighboring processors, and sort them into the local particle list.
-\end{itemize}
-
-Emigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI {\em Waitall} command is also used.
-
-Besides determining the emigrant particles that must leave the processor, each processor also determines which local particles lie near the boundary of, but still within, the processor's space. The particles that lie within this ghost region are added to one of three lists: new ghost list (if they were not within the ghost region last cycle), moved ghost list (if they were within the ghost region last cycle) or the deleted ghost list (if a particle is no longer a ghost). These three lists are then sent to the appropriate neighbors, with an asynchronous MPI send.
-
-Each processor then performs three blocking reads from each of its neighbors, to receive the three ghost lists. Each ghost particle is either added, removed or moved around in the local particle list. The advantage of having three lists is that particles tend to remain in the ghost region for a number of consecutive cycles, and simply updating the position of the ghost particles is much faster O(1) than removing and then adding the ghost particles back O(n).
-
-If the results must be saved, an MPI Gather operation is used to send all the particles to processor 0, who writes them to file.
+Only minor modifications were necessary to transform the serial microblocks algorithm to a parallel implementation using OpenMP. OpenMP pragmas were added to distribute the particle collision detection/force calculation, particle movements, and particle migrations for each microblock to separate processors. Additional synchronization was needed to handle the cases where multiple threads attempt to add or remove particles from the same microblock simultaneously. We handle this situation by locking the microblock particle lists during additions and removals. Implicit barriers sit between the force calculation, movement, and migration stages due to the semantics of the OpenMP {\em for} pragma.
 
 \subsection{Pthreads using Sweep and Prune}
 The Sweep and Prune algorithm maps well onto sequential hardware but
@@ -267,9 +244,32 @@ The algorithm is summarized as :
 \end{aligned}
 \]
 
-\subsection{OpenMP using Microblocks}
+\subsection{MPI using Microblocks}
 
-Only minor modifications were necessary to transform the serial microblocks algorithm to a parallel implementation using OpenMP. OpenMP pragmas were added to distribute the particle collision detection/force calculation, particle movements, and particle migrations for each microblock to separate processors. Additional synchronization was needed to handle the cases where multiple threads attempt to add or remove particles from the same microblock simultaneously. We handle this situation by locking the microblock particle lists during additions and removals. Implicit barriers sit between the force calculation, movement, and migration stages due to the semantics of the OpenMP {\em for} pragma.
+To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighboring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
+
+To determine which particles need to be sent as ghosts to neighboring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighboring regions. To prevent unnecessary copying of data we store only pointers to particles in the microblocks, and to prevent recomputing its neighbors on each frame each microblock also stores pointers to neighboring microblocks.
+
+\subsection{MPI using Sweep and Prune}
+
+The physical particle space is divided into a 2D grid, with each block in the grid assigned to a different processor. Initially, processor 0 broadcasts all the particles to all other processors. Each processor then selects the particles that fall within its ``physical'' boundaries, and adds these particles to a local, sorted, particle list.
+
+After the initialization stage, the main loop performs the following operations, in order. Note that each processor has a list of its own particles, as well as the ghost particles that lie in the regions immediately surrounding the processor.
+\begin{itemize}
+\item Calculate the forces on local particles, due to other local particles, as well as ghost particles.
+\item Move the local particles, using the sweep and prune algorithm to determine collisions between the local and ghost particles.
+\item Determine which local particles have moved outside the boundaries of this processor. Use MPI to send these emigrant particles to the relevant neighboring processor. Similarly, immigrant particles, which have now moved into this processor's space, are received from neighbors and added to the local sorted list.
+\item Determine which local particles lie near the (inside) boundary of this processor. These are the ghost particles, and are sent to neighboring processors in MPI messages.
+\item Receive ghost particles from neighboring processors, and sort them into the local particle list.
+\end{itemize}
+
+Emigrant particles are sent to all eight neighboring processors using an asynchronous MPI send, and then removed from the local list of particles. The processor then does a blocking read from each of its eight neighbors, in turn. When the list of immigrant particles is received from each neighbor, these particles are sorted into the local list of particles. This sorting process may be costly if there are lots of immigrants. The blocking reads are essentially the synchronization step in this algorithm. However, to ensure that all processors do in fact stay in synchronization, an MPI {\em Waitall} command is also used.
+
+Besides determining the emigrant particles that must leave the processor, each processor also determines which local particles lie near the boundary of, but still within, the processor's space. The particles that lie within this ghost region are added to one of three lists: new ghost list (if they were not within the ghost region last cycle), moved ghost list (if they were within the ghost region last cycle) or the deleted ghost list (if a particle is no longer a ghost). These three lists are then sent to the appropriate neighbors, with an asynchronous MPI send.
+
+Each processor then performs three blocking reads from each of its neighbors, to receive the three ghost lists. Each ghost particle is either added, removed or moved around in the local particle list. The advantage of having three lists is that particles tend to remain in the ghost region for a number of consecutive cycles, and simply updating the position of the ghost particles is much faster O(1) than removing and then adding the ghost particles back O(n).
+
+If the results must be saved, an MPI Gather operation is used to send all the particles to processor 0, who writes them to file.
 
 \subsection{CUDA using Microblocks}
 
@@ -410,81 +410,40 @@ by sweep and prune than by the force and position updates.
 \end{figure}
 
 
-\subsection{MPI using Microblocks}
+\subsection{OpenMP using Microblocks}
 
-Figure~\ref{mpi_mb_n} shows the MPI microblocks implementation follows O(n) for various p. Similar to OpenMP, the same phenomena for higher n with low p and lower n with high p manifest for the same reasons (although here amplified in magnitude due to the larger problem space explored). Figure~\ref{mpi_mb_p} demonstrates the MPI microblocks implementation scales by O(n/p) as desired. The scaling for one million particles versus p most visibly demonstrates the power of the MPI implementation to exploit parallelism in this problem. In fact, since the MPI implementation strictly partitions the memory (compared to OpenMP), superscaling better than 1/p is exhibited as increasing p reduces the impact of memory issues. Even so, overhead costs from communication and synchronization limit the number of cores usable for sub-million particle problems to 48.
+Figure~\ref{openmp_mb_n}  demonstrates the OpenMP microblocks implementation also scales roughly with O(n). When p is low, performance scales very precisely as O(n) for low n whereas for higher p, performance scales with O(n) for higher n. The former phenomenon is explained by overhead and synchronization needed by OpenMP using many threads that is exposed at low n. The latter phenomenon can again be explained by memory effects: when p is higher, more memory caches are available thus allowing the handling of higher n. Figure~\ref{openmp_mb_p} demonstrates that the OpenMP implementation scales by O(n/p) when n$\geq$10000 and p$\leq$12. The boundary at 12 corresponds with known features of the Hopper architecture: the system is composed of 12-core processors. When the number of cores used increases above 12, requests must now be serviced on a larger interconnect network, incurring higher overhead. Due to the leveling off with p in this figure, OpenMP was not even attempted for p$>$24.
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/mpi_mb_n.png}
-\caption{Execution Time vs Number of Particles for MPI Microblocks Code}
-\label{mpi_mb_n}
+\includegraphics[width=0.7\textwidth]{figures/openmp_mb_n.png}
+\caption{Execution Time vs Number of Particles for OpenMP Microblocks}
+\label{openmp_mb_n}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/mpi_mb_p.png}
-\caption{Execution Time vs Number of Processors for MPI Microblocks Code}
-\label{mpi_mb_p}
+\includegraphics[width=0.7\textwidth]{figures/openmp_mb_p.png}
+\caption{Execution Time vs Number of Processors for OpenMP Microblocks}
+\label{openmp_mb_p}
 \end{figure}
 
-Figure~\ref{mpi_mb_flops} explores how computational intensity (measured using IPM) changes as a function of the n and p. For very small n, the overhead in MPI communication causes lower p to be favored. However, for a million particles, the overhead is effectively hidden by the computation size thus allowing for good performance scaling with p. For `medium' n, 24-48 cores form a sweet spot balancing increasing MPI overhead with decreasing memory footprint and thus deliver the best performance. Figure~\ref{mpi_mb_rtime}, which graph the relative time spent synchronizing, computing, and communication, sheds some light on these results. The optimal performance is gained when slightly more than half the time is spent computing. In general, the time spent synchronizing tracks the time spent communication (likely since synchronization waits are only incurred immediately following communication steps to ensure buffers are not overwritten).
+Figure~\ref{openmp_mb_flops} shows that the floating point utilization (measured using CrayPAT) drops as the number of threads increases. Again, this is likely due to memory effects. However, in contrast to the serial implementation where memory issues generally equated to cache misses, here the slowdown from memory operations is attributable to cache coherence overhead amongst the system cores. Figure~\ref{openmp_mb_rtime} tracks the time spent in portions of particle simulation (for select n) versus p. Somewhat surprisingly, the portion of time spent handling particle migrations is constant across both problem size and number of threads used (even though this is the only portion of code using locks). The rise in relative time spent handling movements is most likely a symptom of memory overhead since the actual computation is very simple thus most time is spent dealing with memory. Also, the OpenMP worker threads are redistributed within each compute portion (to help maintain a fair workload as particles move around), thus taxing the cache coherence system.
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.8\textwidth]{figures/mpi_mb_flops.png}
-\caption{Floating Point Utilization for MPI Microblocks Code}
-\label{mpi_mb_flops}
+\includegraphics[width=0.7\textwidth]{figures/openmp_mb_flops.png}
+\caption{Floating Point Utilization for OpenMP Microblocks}
+\label{openmp_mb_flops}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=1\textwidth]{figures/mpi_mb_rtime.png}
-\caption{Allocation of Program Time for MPI Microblocks Implementation}
-\label{mpi_mb_rtime}
+\includegraphics[width=1\textwidth]{figures/openmp_mb_rtime.png}
+\caption{Program Time Allocation for OpenMP Microblocks}
+\label{openmp_mb_rtime}
 \end{figure}
 
-\subsection{MPI using Sweep and Prune}
-
-Figure \ref{mpips_time_vs_n} shows the time taken to execute 100 cycles of the simulation, with different numbers of particles (n). Log-log plots for 4, 8, 16, 24 and 48 processors are given. Since each of Hopper's nodes have 24 processors, only the 48-processor plot spans two physical machines; the other experiments were all run on a single machine.
-
-If the MPI Sweep and Prune algorithm ran in purely O(n) time, one would expect the log-log curves in Figure~\ref{mpips_time_vs_n} to be linear with a slope of 1. However, if one attempts to fit a polynomial curve to these plots, one finds that the degree of linearity depends on the number of processors. With 4 processors, the time versus n curve is best approximated by an O(n$^{1.7}$) curve, while at 24 processors, the curve is best approximated by a straight line, i.e. O(n). Therefore, the algorithm runs in O(n) time, as long as 16 or more processors are used in parallel. The O(n$^{1.7}$) run-time with few processors is due to the O(n$^{2}$) sort that must be performed whenever a ghost particle or immigrant particle is inserted into a local processor's particle list. With 16 or more processors, the number of immigrants and ghosts per processor decreases sufficiently that this sorting cost becomes negligable.
-
-\begin{figure}[!h]
-\centering
-\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
-\caption{Processing Time vs Number of Particles for MPI Sweep and Prune}
-\label{mpips_time_vs_n}
-\end{figure}
-
-Figure \ref{mpips_speedup_vs_p} is a log-linear plot showing the percentage of peak machine FLOPS/s acheived as the number of processors is increased. For all values of {\em n} and {\em p}, the parallel algorithm does not acheive more than 1\% of total machine peak (i.e. combined performance of all processors). This clearly indicates that the software is spending a large amount of time waiting for MPI network responses or cache misses. Furthermore, the percentage of machine peaks seems to decreases slightly as P increases, indicating that the algorithm spends more time communicating and less time computing, as the number of processors is increased. This is verified by Figure~\ref{mpips_timealloc_vs_p}.
-
-Other than these facts, not much else can be drawn from this plot, due to the unreliable FLOPS/s reported by Craypat. Craypat introduces a large overhead when profiling the code (as large as 99\%), which must be factored out in the FLOPS/s calculation. However, the exact overhead is only an estimate, and varies drastically from run to run. As a result, the curves in Figure \ref{mpips_speedup_vs_p} are rather noisy. This could be improved by profiling the code multiple times, and averaging the results.
-
-\begin{figure}[!h]
-\centering
-\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
-\caption{Floating Point Utilization for MPI Sweep and Prune}
-\label{mpips_flops_vs_p}
-\end{figure}
-
-Figure \ref{mpips_speedup_vs_p} shows the speedup achieved by adding more processors. Note that this is relative to the purely serial sweep-and-prune code, which does not do any communication. For 500 particles, no speedup is achieved by adding more processors, as the processors spend all their time communicating and virtually no time actually computing collisions. However, for 10 000 particles, the speedup curve is perfectly linear with a slope of 1. If the number of processors is doubled, the program runs in half the time. However, the speedup is not {\em p-times}, but rather {\em (p/k)-times}, where {\em k} is the fixed cost of communication. At a count of 40 000 processors, the speedup is actually greater than linear, as the number of ghost and immigrant particles per processor decreases as {\em p} is increased. Since the cost of sorting the ghost and immigrant particles into the local particle list is costly, increasing the number of processors has a big effect on reducing this cost.
-
-\begin{figure}[!h]
-\centering
-\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
-\caption{MPI Sweep and Prune Speedup relative to Serial Sweep and Prune}
-\label{mpips_speedup_vs_p}
-\end{figure}
-
-Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simulating 10 000 particles on different numbers of processors. As the number of processors is increased, each processor does less computation per cycle. However, the number of MPI messages sent by each processor is constant. Therefore, as {\em p} increases, a smaller portion of the time is spent computing, and a greater portion is spent communicating. The synchronization curve indicates the time spent in the MPI {\em Waitall} operation. This is always almost 0\%, as the actual synchronization is performed by the blocking MPI receive calls.
-
-\begin{figure}[!h]
-\centering
-\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
-\caption{Allocation of Program Time for MPI Sweep and Prune}
-\label{mpips_timealloc_vs_p}
-\end{figure}
 
 \subsection{Pthreads using Sweep and Prune}
 Figure \ref{plot:thread_t_v_n} shows how the execution time scales
@@ -567,38 +526,80 @@ of Processors.}
 \label{plot:thread_breakdown_10000}
 \end{figure}
 
-\subsection{OpenMP using Microblocks}
+\subsection{MPI using Microblocks}
 
-Figure~\ref{openmp_mb_n}  demonstrates the OpenMP microblocks implementation also scales roughly with O(n). When p is low, performance scales very precisely as O(n) for low n whereas for higher p, performance scales with O(n) for higher n. The former phenomenon is explained by overhead and synchronization needed by OpenMP using many threads that is exposed at low n. The latter phenomenon can again be explained by memory effects: when p is higher, more memory caches are available thus allowing the handling of higher n. Figure~\ref{openmp_mb_p} demonstrates that the OpenMP implementation scales by O(n/p) when n$\geq$10000 and p$\leq$12. The boundary at 12 corresponds with known features of the Hopper architecture: the system is composed of 12-core processors. When the number of cores used increases above 12, requests must now be serviced on a larger interconnect network, incurring higher overhead. Due to the leveling off with p in this figure, OpenMP was not even attempted for p$>$24.
+Figure~\ref{mpi_mb_n} shows the MPI microblocks implementation follows O(n) for various p. Similar to OpenMP, the same phenomena for higher n with low p and lower n with high p manifest for the same reasons (although here amplified in magnitude due to the larger problem space explored). Figure~\ref{mpi_mb_p} demonstrates the MPI microblocks implementation scales by O(n/p) as desired. The scaling for one million particles versus p most visibly demonstrates the power of the MPI implementation to exploit parallelism in this problem. In fact, since the MPI implementation strictly partitions the memory (compared to OpenMP), superscaling better than 1/p is exhibited as increasing p reduces the impact of memory issues. Even so, overhead costs from communication and synchronization limit the number of cores usable for sub-million particle problems to 48.
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/openmp_mb_n.png}
-\caption{Execution Time vs Number of Particles for OpenMP Microblocks}
-\label{openmp_mb_n}
+\includegraphics[width=0.7\textwidth]{figures/mpi_mb_n.png}
+\caption{Execution Time vs Number of Particles for MPI Microblocks Code}
+\label{mpi_mb_n}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/openmp_mb_p.png}
-\caption{Execution Time vs Number of Processors for OpenMP Microblocks}
-\label{openmp_mb_p}
+\includegraphics[width=0.7\textwidth]{figures/mpi_mb_p.png}
+\caption{Execution Time vs Number of Processors for MPI Microblocks Code}
+\label{mpi_mb_p}
 \end{figure}
 
-Figure~\ref{openmp_mb_flops} shows that the floating point utilization (measured using CrayPAT) drops as the number of threads increases. Again, this is likely due to memory effects. However, in contrast to the serial implementation where memory issues generally equated to cache misses, here the slowdown from memory operations is attributable to cache coherence overhead amongst the system cores. Figure~\ref{openmp_mb_rtime} tracks the time spent in portions of particle simulation (for select n) versus p. Somewhat surprisingly, the portion of time spent handling particle migrations is constant across both problem size and number of threads used (even though this is the only portion of code using locks). The rise in relative time spent handling movements is most likely a symptom of memory overhead since the actual computation is very simple thus most time is spent dealing with memory. Also, the OpenMP worker threads are redistributed within each compute portion (to help maintain a fair workload as particles move around), thus taxing the cache coherence system.
+Figure~\ref{mpi_mb_flops} explores how computational intensity (measured using IPM) changes as a function of the n and p. For very small n, the overhead in MPI communication causes lower p to be favored. However, for a million particles, the overhead is effectively hidden by the computation size thus allowing for good performance scaling with p. For `medium' n, 24-48 cores form a sweet spot balancing increasing MPI overhead with decreasing memory footprint and thus deliver the best performance. Figure~\ref{mpi_mb_rtime}, which graph the relative time spent synchronizing, computing, and communication, sheds some light on these results. The optimal performance is gained when slightly more than half the time is spent computing. In general, the time spent synchronizing tracks the time spent communication (likely since synchronization waits are only incurred immediately following communication steps to ensure buffers are not overwritten).
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/openmp_mb_flops.png}
-\caption{Floating Point Utilization for OpenMP Microblocks}
-\label{openmp_mb_flops}
+\includegraphics[width=0.8\textwidth]{figures/mpi_mb_flops.png}
+\caption{Floating Point Utilization for MPI Microblocks Code}
+\label{mpi_mb_flops}
 \end{figure}
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=1\textwidth]{figures/openmp_mb_rtime.png}
-\caption{Program Time Allocation for OpenMP Microblocks}
-\label{openmp_mb_rtime}
+\includegraphics[width=1\textwidth]{figures/mpi_mb_rtime.png}
+\caption{Allocation of Program Time for MPI Microblocks Implementation}
+\label{mpi_mb_rtime}
+\end{figure}
+
+\subsection{MPI using Sweep and Prune}
+
+Figure \ref{mpips_time_vs_n} shows the time taken to execute 100 cycles of the simulation, with different numbers of particles (n). Log-log plots for 4, 8, 16, 24 and 48 processors are given. Since each of Hopper's nodes have 24 processors, only the 48-processor plot spans two physical machines; the other experiments were all run on a single machine.
+
+If the MPI Sweep and Prune algorithm ran in purely O(n) time, one would expect the log-log curves in Figure~\ref{mpips_time_vs_n} to be linear with a slope of 1. However, if one attempts to fit a polynomial curve to these plots, one finds that the degree of linearity depends on the number of processors. With 4 processors, the time versus n curve is best approximated by an O(n$^{1.7}$) curve, while at 24 processors, the curve is best approximated by a straight line, i.e. O(n). Therefore, the algorithm runs in O(n) time, as long as 16 or more processors are used in parallel. The O(n$^{1.7}$) run-time with few processors is due to the O(n$^{2}$) sort that must be performed whenever a ghost particle or immigrant particle is inserted into a local processor's particle list. With 16 or more processors, the number of immigrants and ghosts per processor decreases sufficiently that this sorting cost becomes negligable.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_time_vs_n}
+\caption{Processing Time vs Number of Particles for MPI Sweep and Prune}
+\label{mpips_time_vs_n}
+\end{figure}
+
+Figure \ref{mpips_speedup_vs_p} is a log-linear plot showing the percentage of peak machine FLOPS/s acheived as the number of processors is increased. For all values of {\em n} and {\em p}, the parallel algorithm does not acheive more than 1\% of total machine peak (i.e. combined performance of all processors). This clearly indicates that the software is spending a large amount of time waiting for MPI network responses or cache misses. Furthermore, the percentage of machine peaks seems to decreases slightly as P increases, indicating that the algorithm spends more time communicating and less time computing, as the number of processors is increased. This is verified by Figure~\ref{mpips_timealloc_vs_p}.
+
+Other than these facts, not much else can be drawn from this plot, due to the unreliable FLOPS/s reported by Craypat. Craypat introduces a large overhead when profiling the code (as large as 99\%), which must be factored out in the FLOPS/s calculation. However, the exact overhead is only an estimate, and varies drastically from run to run. As a result, the curves in Figure \ref{mpips_speedup_vs_p} are rather noisy. This could be improved by profiling the code multiple times, and averaging the results.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_flops_vs_p}
+\caption{Floating Point Utilization for MPI Sweep and Prune}
+\label{mpips_flops_vs_p}
+\end{figure}
+
+Figure \ref{mpips_speedup_vs_p} shows the speedup achieved by adding more processors. Note that this is relative to the purely serial sweep-and-prune code, which does not do any communication. For 500 particles, no speedup is achieved by adding more processors, as the processors spend all their time communicating and virtually no time actually computing collisions. However, for 10 000 particles, the speedup curve is perfectly linear with a slope of 1. If the number of processors is doubled, the program runs in half the time. However, the speedup is not {\em p-times}, but rather {\em (p/k)-times}, where {\em k} is the fixed cost of communication. At a count of 40 000 processors, the speedup is actually greater than linear, as the number of ghost and immigrant particles per processor decreases as {\em p} is increased. Since the cost of sorting the ghost and immigrant particles into the local particle list is costly, increasing the number of processors has a big effect on reducing this cost.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_speedup_vs_p}
+\caption{MPI Sweep and Prune Speedup relative to Serial Sweep and Prune}
+\label{mpips_speedup_vs_p}
+\end{figure}
+
+Figure~\ref{mpips_timealloc_vs_p} shows how execution time is allocated for simulating 10 000 particles on different numbers of processors. As the number of processors is increased, each processor does less computation per cycle. However, the number of MPI messages sent by each processor is constant. Therefore, as {\em p} increases, a smaller portion of the time is spent computing, and a greater portion is spent communicating. The synchronization curve indicates the time spent in the MPI {\em Waitall} operation. This is always almost 0\%, as the actual synchronization is performed by the blocking MPI receive calls.
+
+\begin{figure}[!h]
+\centering
+\includegraphics*[width=0.7\textwidth, viewport= 70 70 730 550]{figures/mpips_timealloc_vs_p}
+\caption{Allocation of Program Time for MPI Sweep and Prune}
+\label{mpips_timealloc_vs_p}
 \end{figure}
 
 \subsection{CUDA using Microblocks}
