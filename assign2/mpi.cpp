@@ -5,51 +5,54 @@
 #include <math.h>
 #include <algorithm>
 #include "common.h"
-#include "mpi_particles.h"
+#include "mpi_mb.h"
+#include "microblock.h"
+#include "plist.h"
+#include "ppile.h"
 
 MPI_Datatype PARTICLE;
-int rank;
+
 //
 //  benchmarking program
 //
 int main( int argc, char **argv )
 {    
-    //
-    //  process command line parameters
-    //
-    if( find_option( argc, argv, "-h" ) >= 0 )
-    {
-        printf( "Options:\n" );
-        printf( "-h to see this help\n" );
-        printf( "-n <int> to set the number of particles\n" );
-        printf( "-o <filename> to specify the output file name\n" );
-        return 0;
-    }
-    
-    int n = read_int( argc, argv, "-n", 1000 );
-    char *savename = read_string( argc, argv, "-o", NULL );
-    
-    //
-    //  set up MPI
-    //
-    int n_proc; //, rank;
-    MPI_Init( &argc, &argv );
-    MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+	//
+	//  process command line parameters
+	//
+	if( find_option( argc, argv, "-h" ) >= 0 )
+	{
+		printf( "Options:\n" );
+		printf( "-h to see this help\n" );
+		printf( "-n <int> to set the number of particles\n" );
+		printf( "-o <filename> to specify the output file name\n" );
+		return 0;
+	}
+
+	int n = read_int( argc, argv, "-n", 1000 );
+	char *savename = read_string( argc, argv, "-o", NULL );
+
+	//
+	//  set up MPI
+	//
+	int n_proc, rank;
+	MPI_Init( &argc, &argv );
+	MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
+	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 	
-    double sim_size = set_size(n);
-    
-    //
-    //  allocate generic resources
-    //
-    FILE *fsave = savename && rank == 0 ? fopen( savename, "w" ) : NULL;
-    
-    MPI_Type_contiguous( 7, MPI_DOUBLE, &PARTICLE );
-    MPI_Type_commit( &PARTICLE );
-    
-    //
-    //  set up the data partitioning across processors
-    //
+	double sim_size = set_size(n);
+
+	//
+	//  allocate generic resources
+	//
+	FILE *fsave = savename && rank == 0 ? fopen( savename, "w" ) : NULL;
+
+	MPI_Type_contiguous( 7, MPI_DOUBLE, &PARTICLE );
+	MPI_Type_commit( &PARTICLE );
+
+	//
+	//  set up the data partitioning across processors
+	//
 	// Determine how many cells are along each axis
 	int num_proc_x, num_proc_y;
 	for(int factor = (int)floor(sqrt((double)n_proc)); factor >= 1; --factor)
@@ -62,112 +65,78 @@ int main( int argc, char **argv )
 		}
 	}
 	
-	// Determine where this cell is
-	int proc_x, proc_y;
-	proc_x = rank % num_proc_x;
-	proc_y = rank/num_proc_x;
-	
-	// Determine my cell boundaries
-	double left_x, right_x, bottom_y, top_y;
-	left_x   = (proc_x==0)            ? (0)        : ((sim_size/num_proc_x)*proc_x);
-	right_x  = (proc_x==num_proc_x-1) ? (sim_size) : ((sim_size/num_proc_x)*(proc_x+1));
-	bottom_y = (proc_y==0)            ? (0)        : ((sim_size/num_proc_y)*proc_y);
-	top_y    = (proc_y==num_proc_y-1) ? (sim_size) : ((sim_size/num_proc_y)*(proc_y+1));
+	mpi_cell* mycell = create_mpi_cell(sim_size, num_proc_x, num_proc_y, rank);
+	microblock* microblocks = (microblock*) malloc(mycell->num_micro_x*mycell->num_micro_y * sizeof(microblock));
+	setup_microblocks(microblocks, mycell);
 
-	// Determine the ranks of my neighbors for message passing, NONE means no neighbor
-	int neighbors[8];
-	int num_neighbors = 0;
-	// In order, positions are SW, S, SE, W, E, NW, N, NE
-	neighbors[p_sw] = ((proc_x != 0)            && (proc_y != 0)           ) ? ((proc_y-1)*num_proc_x + (proc_x-1)) : (NONE);
-	neighbors[p_s ] = (                            (proc_y != 0)           ) ? ((proc_y-1)*num_proc_x + (proc_x  )) : (NONE);
-	neighbors[p_se] = ((proc_x != num_proc_x-1) && (proc_y != 0)           ) ? ((proc_y-1)*num_proc_x + (proc_x+1)) : (NONE);
-	
-	neighbors[p_w ] = ((proc_x != 0)                                       ) ? ((proc_y  )*num_proc_x + (proc_x-1)) : (NONE);
-	neighbors[p_e ] = ((proc_x != num_proc_x-1)                            ) ? ((proc_y  )*num_proc_x + (proc_x+1)) : (NONE);
-	
-	neighbors[p_nw] = ((proc_x != 0)            && (proc_y != num_proc_y-1)) ? ((proc_y+1)*num_proc_x + (proc_x-1)) : (NONE);
-	neighbors[p_n ] = (                            (proc_y != num_proc_y-1)) ? ((proc_y+1)*num_proc_x + (proc_x  )) : (NONE);
-	neighbors[p_ne] = ((proc_x != num_proc_x-1) && (proc_y != num_proc_y-1)) ? ((proc_y+1)*num_proc_x + (proc_x+1)) : (NONE);
-    
-	for(int i = 0 ; i < 8; ++i)
-	{
-		if(neighbors[i] != NONE) num_neighbors++;
-	}
-    
-    //
-    //  allocate storage for local particles, ghost particles, ids
-    //
-	partition_t* part = alloc_partition(n);
-
-	int* local_ids = (int*) malloc(n*sizeof(int));
-	int nlocal = 0;
-	
-	int* ghost_ids = (int*) malloc(n*sizeof(int));
-	int nghost = 0;
+	//
+	//  allocate storage for local particles, ghost particles, ids
+	//
+	plist* local = alloc_plist(n);
+	ppile* ghost = alloc_ppile(n);
 	
 	setup_ghost_structure(n);
 	init_emigrant_buf(n);
 
-    //
-    //  initialize and distribute the particles (that's fine to leave it unoptimized)
-    //
-
+	//
+	//  initialize and distribute the particles (that's fine to leave it unoptimized)
+	//
 	particle_t* particles = (particle_t*) malloc(n * sizeof(particle_t));
-	
 	if( rank == 0 )
 		init_particles( n, particles);
-	
 	MPI_Bcast((void *) particles, n, PARTICLE, 0, MPI_COMM_WORLD);
-	nlocal = select_particles(part, n, particles, local_ids, left_x, right_x, bottom_y, top_y);
 
-    // Determine the cycle 0 ghosts
-    prepare_initial_ghost_packets(part, local_ids, nlocal, left_x, right_x, bottom_y, top_y, neighbors);
+	distribute_particles(microblocks, mycell, local, particles, n);
 
-    //
-    //  simulate a number of time steps
-    //
-    double simulation_time = read_timer( );
-    for( int step = 0; step < NSTEPS; step++ )
-    {
+	MPI_Pcontrol( 1,"compute");
+	//
+	//  simulate a number of time steps
+	//
+	double simulation_time = read_timer();
+	for( int step = 0; step < NSTEPS; step++ )
+	{
 		//
 		//  Handle ghosting
 		//
-		send_ghost_packets(neighbors);
-		receive_ghost_packets(part, ghost_ids, &nghost, neighbors, num_neighbors, n);
+		prepare_ghost_packets(mycell, microblocks);
+		send_ghost_packets(mycell);
+		receive_ghost_packets(mycell, ghost, n);
 	
         //  Compute all forces
         //
-        update_particles_mpi(part, left_x, right_x, bottom_y, top_y);
+		process_particles(microblocks, mycell->num_micro_x*mycell->num_micro_y);
 		
 		//
 		//  Handle migration
 		//
-		prepare_emigrants(part, local_ids, &nlocal, left_x, right_x, bottom_y, top_y, neighbors);
-		send_emigrants(neighbors);
-		receive_immigrants(neighbors, num_neighbors, part, local_ids, &nlocal, n, left_x, right_x, bottom_y, top_y);
+		prepare_emigrants(mycell, microblocks, local);
+		send_emigrants(mycell);
+		receive_immigrants(mycell, microblocks, local, n);
 		
 		//
         //  save current step if necessary
         //
 		if(savename && (step%SAVEFREQ) == 0)
 		{
-			prepare_save(part, rank, n_proc, local_ids, nlocal, particles, n);
+			prepare_save(rank, n_proc, local, particles, n);
 			
 			if(fsave)
 				save( fsave, n, particles );
 		}
     }
     simulation_time = read_timer( ) - simulation_time;
-
+	MPI_Pcontrol( -1,"compute");
+    
     if( rank == 0 )
         printf( "n = %d, n_procs = %d, simulation time = %g s\n", n, n_proc, simulation_time );
     
     //
     //  release resources
     //
-    free( local_ids );
-    free( ghost_ids );
-    free( particles );
+	free( mycell );
+	
+	free_plist(local);
+	free_ppile(ghost);
 	
 	free_emigrant_buf();
 	clean_ghost_structure();
@@ -180,13 +149,13 @@ int main( int argc, char **argv )
     return 0;
 }
 
-void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int nlocal, particle_t* particles, int n)
+void prepare_save(int rank, int n_proc, plist* local, particle_t* particles, int n)
 {
 	// First, get the number of particles in each node into node 0. Also prepare array placement offsets.
 	int* node_particles_num    = (int *) malloc(n_proc*sizeof(int));
 	int* node_particles_offset = (int *) malloc(n_proc*sizeof(int));
 	
-	MPI_Gather(&nlocal, 1, MPI_INT, node_particles_num, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Gather(&local->num_used_ids, 1, MPI_INT, node_particles_num, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	
 	if(rank == 0)
 	{
@@ -198,16 +167,21 @@ void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int n
 	}
 	
 	// Now, each node prepares a collapsed list of all valid particles
-	particle_t* collapsed_local = (particle_t *) malloc(nlocal * sizeof(particle_t));
+	particle_t* collapsed_local = (particle_t *) malloc(local->num_used_ids * sizeof(particle_t));
 	
-	for(int i = 0; i < nlocal; ++i)
+	int cp = 0;
+	for(int i = 0; i < local->end_particle; ++i)
 	{
-		particle_t packing = *(get_particle(part, local_ids[i]));
-		collapsed_local[i] = packing;
+		if(local->is_id_active[i] == 0) continue;
+		
+		particle_t packing = local->particles[i];
+		collapsed_local[cp] = packing;
+		
+		cp++;
 	}
 	
 	// Next, send the particles to node 0
-	MPI_Gatherv(collapsed_local, nlocal, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
+	MPI_Gatherv(collapsed_local, cp, PARTICLE, particles, node_particles_num, node_particles_offset, PARTICLE, 0, MPI_COMM_WORLD);
 	
 	// Finally, sort the particles at node 0
 	if(rank == 0)
@@ -221,67 +195,8 @@ void prepare_save(partition_t* part, int rank, int n_proc, int* local_ids, int n
 	free(node_particles_num);
 	free(node_particles_offset);
 }
+
 bool compare_particles(particle_t left, particle_t right) // check if id < id
 {
 	return left.globalID < right.globalID;
 }
-
-int select_particles(partition_t* part, int n, particle_t* particles, int* local_ids, double left_x, double right_x, double bottom_y, double top_y)
-// Note, does not take particles precisely on the top or right border.
-{
-	int current_particle = 0;
-	
-	for(int i = 0; i < n; ++i)
-	{
-		if((particles[i].x >= left_x) && (particles[i].x < right_x) && (particles[i].y >= bottom_y) && (particles[i].y < top_y))
-		// Particle in my box, take it
-		{
-			local_ids[current_particle] = add_particle(part, particles[i]);
-			
-			current_particle++;
-		}
-	}
-	
-	// Make sure we know how many local particles we have.
-	return current_particle;
-}
-
-
-//
-// Modified version of update_particle from prune_sweep.cpp
-//
-void update_particles_mpi(partition_t* p, double left_x, double right_x, double bottom_y, double top_y) {
-
-  // Local variables
-  double oldx, oldy;
-
-  //Calculate active collisions
-  sweep_and_prune(p);
-
-  //Reset acceleration
-  for(int i=0; i<p->num_particles; i++)
-    if(p->is_id_active[i])
-      p->particles[i].ax = p->particles[i].ay = 0;
-
-  //Accumulate acceleration
-  for(int i=0; i<p->num_active_collisions; i++){
-    collision c = p->active_collisions[i];
-    if(p->is_id_active[c.id1] && p->is_id_active[c.id2])
-       if(!p->is_ghost[c.id1] || !p->is_ghost[c.id2])
-          apply_pairwise_force(&(p->particles[c.id1]), &(p->particles[c.id2]));
-  }
-
-  //Move Particles
-  for(int i=0; i<p->num_particles; i++)
-  {
-    if(p->is_id_active[i] && !(p->is_ghost[i]))
-    {
-      oldx = p->particles[i].x;
-      oldy = p->particles[i].y;
-      move(p->particles[i]);
-
-      update_ghost(p->particles[i], oldx, oldy, left_x, right_x, bottom_y, top_y);
-    }
-  }
-}
-

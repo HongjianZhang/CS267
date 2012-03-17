@@ -8,41 +8,44 @@ CFLAGS = -O3
 LIBS =
 
 
-TARGETS = serial pthreads openmp mpi serial_mb
+TARGETS = serial pthreads openmp mpi
 
 all:	$(TARGETS)
 
-serial: serial.o prune_sweep.o common.o
-	$(CC) -o $@ $(LIBS) serial.o common.o prune_sweep.o
-serial_mb: serial_mb.o common.o
-	$(CC) -o $@ $(LIBS) serial_mb.o common.o prune_sweep.o
+serial: serial.o common.o
+	$(CC) -o $@ $(LIBS) serial.o common.o
 pthreads: pthreads.o prune_sweep.o common.o
 	$(CC) -o $@ $(LIBS) -lpthread pthreads.o prune_sweep.o common.o
 openmp: openmp.o common.o
 	$(CC) -o $@ $(LIBS) $(OPENMP) openmp.o common.o
-mpi: mpi.o common.o mpi_migrants.o ghost.o prune_sweep.o
-	$(MPCC) -o $@ $(LIBS) $(MPILIBS) mpi.o common.o mpi_migrants.o ghost.o prune_sweep.o
+mpi: mpi.o common.o mpi_migrants.o ghost.o plist.o ppile.o microblock.o mpi_mb.o
+	$(MPCC) -o $@ $(LIBS) $(MPILIBS) mpi.o common.o mpi_migrants.o ghost.o plist.o ppile.o microblock.o mpi_mb.o
 
-openmp.o: openmp.cpp common.h microblock.h
+openmp.o: openmp.cpp common.h
 	$(CC) -c $(OPENMP) $(CFLAGS) openmp.cpp
-serial.o: serial.cpp common.h
+serial.o: serial.cpp common.h microblock.h
 	$(CC) -c $(CFLAGS) serial.cpp
-serial_mb.o: serial_mb.cpp microblock.h common.h
-	$(CC) -c $(CFLAGS) serial_mb.cpp
 prune_sweep.o: prune_sweep.cpp common.h
 	$(CC) -c $(CFLAGS) prune_sweep.cpp
 pthreads.o: pthreads.cpp common.h
 	$(CC) -c $(CFLAGS) pthreads.cpp
-mpi.o: mpi.cpp common.h mpi_particles.h
+mpi.o: mpi.cpp common.h mpi_mb.h microblock.h
 	$(MPCC) -c $(CFLAGS) mpi.cpp
-mpi_migrants.o: mpi_migrants.cpp common.h mpi_particles.h
+mpi_migrants.o: mpi_migrants.cpp common.h microblock.h mpi_mb.h
 	$(MPCC) -c $(CFLAGS) mpi_migrants.cpp
-ghost.o: ghost.cpp common.h mpi_particles.h
+ghost.o: ghost.cpp common.h mpi_mb.h microblock.h
 	$(MPCC) -c $(CFLAGS) ghost.cpp
 common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
-dumb.o: dumb.cpp common.h
-	$(CC) -c $(CFLAGS) dumb.cpp
+mpi_mb.o: common.h mpi_mb.cpp
+	$(MPCC) -c $(CFLAGS) mpi_mb.cpp
+
+microblock.o: microblock.h microblock.cpp common.h
+	$(CC) -c $(CFLAGS) microblock.cpp
+plist.o: plist.h plist.cpp
+	$(CC) -c $(CFLAGS) plist.cpp
+ppile.o: ppile.h ppile.cpp
+	$(CC) -c $(CFLAGS) ppile.cpp
 
 clean:
 	rm -f *.o $(TARGETS)
