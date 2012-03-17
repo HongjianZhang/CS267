@@ -83,7 +83,7 @@ The micro-blocks and prune-and-sweep algorithms for collision detection are desc
 
 \subsection{Serial Micro-blocks}
 
-The microblocking algorithm divides the simulation space into square blocks with side-lengths proportional to {\em cutoff}. After particle creation, each particle is assigned to a corresponding microblock. For each particle, we find its colliding neighbours by checking against all other particles in its own and neighbouring microblocks. Since the forces are repulsive and the particle density is $\sim$1/2 particles per $\text{\em cutoff}^\text{~2}$, there are on average a small number of particles within each microblock. We explored a variety of microblock sizes and found that microblocks with side-lengths of $2\times\text{\em cutoff}$ to be optimal, corresponding to roughly 2 to 3 particles per block. Thus, during collision detection, each particle must check against roughly 21 other particles. A full collision detection sweep is done in $O(n)$ time. Calculating the force on each particle, updating its position, and assigning it to its new microblock is done independently for each particle, and thus takes $O(n)$ time.
+The microblocking algorithm divides the simulation space into square blocks with side-lengths proportional to {\em cutoff}. After particle creation, each particle is assigned to a corresponding microblock. For each particle, we find its colliding neighbors by checking against all other particles in its own and neighboring microblocks. Since the forces are repulsive and the particle density is $\sim$1/2 particles per $\text{\em cutoff}^\text{~2}$, there are on average a small number of particles within each microblock. We explored a variety of microblock sizes and found that microblocks with side-lengths of $2\times\text{\em cutoff}$ to be optimal, corresponding to roughly 2 to 3 particles per block. Thus, during collision detection, each particle must check against roughly 21 other particles. A full collision detection sweep is done in $O(n)$ time. Calculating the force on each particle, updating its position, and assigning it to its new microblock is done independently for each particle, and thus takes $O(n)$ time.
 
 Small optimizations were used to speed up this microblocks implementation. Rather than actually store the particle data in the microblocks, the particle list simply contains addresses to particles in a global particle array. This allows microblock assignment to be done by simply moving single pointers around instead of moving an entire particle data structure. The microblock particle list is modeled after STL vectors and thus insertions and deletions take O(1) time. Similar to STL vector, the particle list is capable of expanding to greater sizes as needed; however, for the particle counts we simulated, a microblock rarely contained more than 4 particles. New microblock assignments are calculated by dividing its position by the microblock sizes in order to handle the case where particles jump across entire microblocks within a single time step,
 
@@ -92,7 +92,7 @@ Small optimizations were used to speed up this microblocks implementation. Rathe
 Particle simulations with only near-field effects have two major characteristics
 that can be exploited when optimizing for performance:
 \begin{enumerate}
-\item Spatial Locality: A particle only interacts with its nearby neighbours.
+\item Spatial Locality: A particle only interacts with its nearby neighbors.
 \item Temporal Locality: If two particles are nearby in the current timestep,
 they are likely to be nearby in the next timestep.
 \end{enumerate}
@@ -177,9 +177,9 @@ dimension.
 
 \subsection{MPI using Micro-blocks}
 
-To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighbouring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
+To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighboring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
 
-To determine which particles need to be sent as ghosts to neighbouring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighbouring regions. To prevent unnecessary copying of data we store only pointers to particles in the microblocks, and to prevent recomputing its neighbours on each frame each microblock also stores pointers to neighbouring microblocks.
+To determine which particles need to be sent as ghosts to neighboring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighboring regions. To prevent unnecessary copying of data we store only pointers to particles in the microblocks, and to prevent recomputing its neighbors on each frame each microblock also stores pointers to neighboring microblocks.
 
 \subsection{MPI using Sweep and Prune}
 
@@ -214,7 +214,7 @@ Within a single processor we use the sequential sweep and prune algorithm.
 
 A region structure contains fields that indicate the extents of its
 boundaries, $\text{min}_{x},\text{max}_{x},\text{min}_{y},\text{max}_{y}$,
-pointers to its neighbouring regions, and a local sweep and prune
+pointers to its neighboring regions, and a local sweep and prune
 structure for managing the particles local to the region. Particles
 may only be added or removed from a region using the \emph{add\_region\_particle
 }and \emph{remove\_region\_particle} functions.
@@ -229,12 +229,12 @@ correctly computing the forces and updating the positions of all particles
 within its \emph{responsibility bounds.} The \emph{send bounds }of
 a region starts at a distance of \emph{cutoff }interior from the border
 and continues to the border. Any particles within the \emph{send bounds
-}need to have its position sent to the neighbouring regions in order
+}need to have its position sent to the neighboring regions in order
 for the regions to accurately compute collisions along boundaries.
 The \emph{ghost bounds }of a region starts at the border and continues
 to a distance of \emph{cutoff }exterior to the border. The region
 will receive the positions of particles within the \emph{ghost bounds}
-from neighbouring regions to use for handling collisions along the
+from neighboring regions to use for handling collisions along the
 boundaries.
 
 
@@ -244,9 +244,9 @@ Every region is run in its own thread of execution, and at every time
 step :
 \begin{enumerate}
 \item Determines which particles are in the \emph{send bounds} and need
-to be sent to their neighbours.
-\item Sends the particles to its neighbours. Particles are sent to each
-neighbour (N, NE, E, SE, S, SW, W, NW) in turn, with a synchronizing
+to be sent to their neighbors.
+\item Sends the particles to its neighbors. Particles are sent to each
+neighbor (N, NE, E, SE, S, SW, W, NW) in turn, with a synchronizing
 barrier after each. This barrier ensures that a region is receiving particles
 from only one thread at a time.
 \item Removes any particles that are outside its \emph{responsibility bounds.}
@@ -259,8 +259,8 @@ The algorithm is summarized as :
 \begin{aligned} & \text{for timestep in }1\ldots\text{NSTEPS do :}\\
  & \quad\text{send\_particles := in\_sending\_bounds(all particles)}\\
  & \quad\text{barrier}\\
- & \quad\text{for neighbour in [N, NE, E, SE, S, SW, W, NW] do :}\\
- & \quad\quad\text{send\_to\_neighbour(neighbour, send\_particles)}\\
+ & \quad\text{for neighbor in [N, NE, E, SE, S, SW, W, NW] do :}\\
+ & \quad\quad\text{send\_to\_neighbor(neighbor, send\_particles)}\\
  & \quad\quad\text{barrier}\\
  & \quad\text{remove\_particles\_out\_of\_responsible\_bounds}\\
  & \quad\text{barrier}
@@ -554,8 +554,8 @@ nor synchronization. We see that actual communication costs are negligible
 compared to synchronization costs. This may be due to our implementation
 choice of allowing regions to accept particles from only one thread
 at a time. This scheme requires 8 barriers to transmit ghost particles
-to neighbouring regions, as one barrier is needed after each send
-to the N, NE, E, SE, S, SW, W, and NW neighbours. 
+to neighboring regions, as one barrier is needed after each send
+to the N, NE, E, SE, S, SW, W, and NW neighbors. 
 
 \begin{figure}
 \begin{centering}
