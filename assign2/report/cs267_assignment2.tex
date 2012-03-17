@@ -55,7 +55,7 @@
 
 %%% The "real" document content comes below...
 
-\title{CS267 Assignment 2: Parts 1 and 2}
+\title{CS267 Assignment 2}
 \author{Patrick Li, Simon Scott, Stephen Twigg}
 %\date{} % Activate to display a given date or no date (if empty),
          % otherwise the current date is printed 
@@ -68,7 +68,7 @@
 
 The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using micro-blocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP, Pthreads and CUDA frameworks.
 
-Each of these serial and parallel algorithms are described in Section \ref{algorithm-section}, while their performance is analyzed in Section \ref{results-section}. Finally, Section \ref{conclusion-section} draws conclusions from these results.
+Each of these serial and parallel algorithms are described in Section \ref{algorithm-section}, and their performance is analyzed in Section \ref{results-section}. Finally, Section \ref{conclusion-section} draws conclusions from these results.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,9 +83,9 @@ The micro-blocks and prune-and-sweep algorithms for collision detection are desc
 
 \subsection{Serial Micro-blocks}
 
-The microblocking algorithm divides the simulation space into nearly square blocks with lengths on the order of magnitude of cutoff. After particles creation, each particle is then placed inside a single microblock. Collisions are detected for a single particle by scanning with all other particles within its own and neighboring microblocks. Since the forces are repulsive and the particle density is $\sim$1/2 particle for each cutoff square, the average number of particles within a microblock is constrained to a low value. Design space exploration revealed microblocks with length equal to twice cutoff (corresponding to 2-3 particles per microblock) to be optimal. Thus, during collision scanning, each particle must check for 21 collisions or $\sim$21n = O(n) collision checks in the whole system. After force application, the particles must be scanned for rebinning into new microblocks. However, rebinning considers each particle in isolation and thus is still O(n).
+The microblocking algorithm divides the simulation space into square blocks with side-lengths proportional to {\em cutoff}. After particle creation, each particle is assigned to a corresponding microblock. For each particle, we find its colliding neighbours by checking against all other particles in its own and neighbouring microblocks. Since the forces are repulsive and the particle density is $\sim$1/2 particles per $\text{\em cutoff}^\text{~2}$, there are on average a small number of particles within each microblock. We explored a variety of microblock sizes and found that microblocks with side-lengths of $2\times\text{\em cutoff}$ to be optimal, corresponding to roughly 2 to 3 particles per block. Thus, during collision detection, each particle must check against roughly 21 other particles. A full collision detection sweep is done in $O(n)$ time. Calculating the force on each particle, updating its position, and assigning it to its new microblock is done independently for each particle, and thus takes $O(n)$ time.
 
-Some small optimizations were used to speed up this microblocks implementation. Rather than actually store the particle data in the microblocks, the particle list simply contains addresses to particles in a global particle array. This allows rebinning to be done by simply moving single pointers around instead of moving an entire particle data structure. The microblock particle list is modeled after STL vectors and thus insertions and deletions are of O(1) complexity. Similar to STL vector, the particle list is capable of expanding to greater sizes as needed; however, for particle counts attempted, the length of a single list rarely rose above the default size of 4. To prevent possible errors due to a particle jumping across an entire microblock within a single time step, rebinning is done from a global perspective (instead of neighbor passing) by calculating the target bin using two floating point multiplications.
+Small optimizations were used to speed up this microblocks implementation. Rather than actually store the particle data in the microblocks, the particle list simply contains addresses to particles in a global particle array. This allows microblock assignment to be done by simply moving single pointers around instead of moving an entire particle data structure. The microblock particle list is modeled after STL vectors and thus insertions and deletions take O(1) time. Similar to STL vector, the particle list is capable of expanding to greater sizes as needed; however, for the particle counts we simulated, a microblock rarely contained more than 4 particles. New microblock assignments are calculated by dividing its position by the microblock sizes in order to handle the case where particles jump across entire microblocks within a single time step,
 
 \subsection{Serial Sweep and Prune}
 
@@ -119,14 +119,13 @@ and $\text{MAX}_{i}$ is the tuple $(\text{MAX},i,x_{\text{i},\text{max}})$.
 $\text{MIN}$ and $\text{MAX}$ are labels that indicate the type
 of the token. $i\in\{1,\ldots,N\}$ is the index of the object. $x_{\text{i},\text{min}},x_{\text{i},\text{max}}\in\mathbb{R}$,
 are the x coordinates of the left-hand and right-hand boundaries of
-the object respectively. The algorithm also maintains a mapping $M$
-from unordered pairs of indices to booleans, $M:(i,j)\in\{1,\ldots,N\}^{2}\rightarrow\text{bool}$,
-that indicates whether object $i$ and $j$ are intersecting. $M$
+the object respectively. A mapping $M$
+from unordered pairs of indices to booleans, $M:(i,j)\in\{1,\ldots,N\}^{2}\rightarrow\text{bool}$, is maintained to indicate whether object $i$ and $j$ are intersecting. $M$
 is initially false for every pair $i$ and $j$.
 
 \subsubsection{Update Step}
 
-To detection collisions, we use an insertion sort to sort L according
+To detect collisions, we use an insertion sort to sort L according
 to the x coordinates of the tokens. 
 
 \[
@@ -144,10 +143,10 @@ where the function \emph{swap} interchanges the positions of token
 $m$ and token $m-1$, and updates the mapping $M$. If the $\text{MAX}$
 token of object $i$ is swapped to the right of the $\text{MIN}$
 token of object $j$ then we set $M(i,j)$ to $\text{true}$, to indicate
-that object $i$ is now intersecting object $j$. If the $\text{MIN}$
+that object $i$ is now intersecting with object $j$. If the $\text{MIN}$
 token of object $i$ is swapped to the right of the $\text{MAX}$
 token of object $j$ then we set $M(i,j)$ to $\text{false}$ to indicate
-that object $i$ is no longer intersecting object $j$. 
+that object $i$ is no longer intersecting with object $j$. 
 
 \[
 \begin{aligned} & \text{define swap }(i,j):\\
@@ -165,7 +164,7 @@ because there is no guarantee on the initial ordering of $L$. But
 for all subsequent timesteps, if the timestep is small and particles
 do not move excessively, the sort can be completed in close to $O(N)$
 computations. As a further possible optimization, a quick $O(n\cdot\text{log }n)$
-sort can be used to obtain the initial ordering for $L$. 
+sort can be used to obtain the initial ordering for $L$. We do not include the list construction and initial sort in our timings.
 
 \subsubsection{Generalization to N-D}
 
@@ -178,9 +177,11 @@ dimension.
 
 \subsection{MPI using Micro-blocks}
 
-An MPI implementation using the microblocks algorithm as the intra-cell kernel was also developed. Each MPI cell is a nearly square subdivision of simulation space in order to minimize needed communication. Naively, just this blocking could be used to resolve the problem in a manner similar to microblocks: cells simply send particles near the border to neighbors as ghosts, collisions are checked between all owned particles and ghosts, and then particles are migrated across cell boundaries as needed. However, the relatively large sizes of MPI cells versus microblocks make this naïve implementation inefficient. Thus, the MPI cells are further subdivided into microblocks inside of the single core and processed as in the serial implementation.
+To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighbouring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
 
-Besides directly speeding up collision detection as in the serial implementation, the microblocks algorithm also speeds up the handling of ghost zone particles and migration of particles between MPI cells. In each cell calculating possible ghosts to send, since microblocks are slightly larger than cutoff, only particles in the edge microblocks must be considered as candidates. Also, the microblocks algorithm already must iterate through each particle to check for migration between microblocks. This operation can be amended to simultaneously handle checking for particles migrating between MPI cells. These two optimizations provided nice performance gains in the MPI microblocks implementation. Other small optimizations were applied to handling the microblocks: they were placed in a pile that can be `cleared' in O(1) time and the `ghost microblocks' were linked to simulation microblocks on simulation setup to prevent the needing complicated neighbor lookups during main computation.
+To determine which particles need to be sent as ghosts to neighbouring regions, we scan through the microblocks near the border of the regions. Since we must iterate through all particles in a microblock anyway to determine which particles to migrate, we can, at this time, also check whether they need to be sent as ghosts to neighbouring regions. 
+
+They were placed in a pile that can be `cleared' in O(1) time and the `ghost microblocks' were linked to simulation microblocks on simulation setup to prevent the needing complicated neighbor lookups during main computation.
 
 \subsection{MPI using Sweep and Prune}
 
@@ -276,6 +277,8 @@ The OpenMP implementation uses the microblocks algorithm as it was found to be e
 
 \subsubsection{The General Algorithm}
 
+The sweep and prune algorithm would have required extensive modifications to port to a GPU architecture due to its inherently serial nature. For this reason, the GPU implementation uses the microblocks algorithm. Similarly to the OpenMP implementation, synchronization was needed to ensure proper behavior when multiple threads add/remove particles to the same microblock. Implicit barriers between the force calculation, particle movement, and migration stages were handled by the CUDA stream implementation.
+
 \subsubsection{GPU Synchronization Techniques}
 After we update the positions of each particle, we need to check whether
 their new positions are still within the bounds of their microblocks.
@@ -317,6 +320,8 @@ illustrated by the following pseudocode.
 Removing a particle does not require any synchronization, and only
 requires that we set the appropriate element in the valid array, $v$,
 to EMPTY.
+
+The GPU simulation loops through three kernels, compute\_forces, move\_particles, and migrate\_particles, that each require the previous stage to finish before starting. Since CUDA 2.0, within a single stream, kernel calls implicitly block when they encounter a different kernel, thus we are guaranteed that the three stages start and finish in sequence. 
 
 \subsubsection{GPU-Specific Optimizations}
 \label{gpu-optimization-section}
