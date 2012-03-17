@@ -2,14 +2,15 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#include <pat_api.h>
 #include "common.h"
 #include "microblock.h"
 
 #define PAT_PROFILING 0
+#if PAT_PROFILING!=0
+#include <pat_api.h>
+#endif
 
 const double micro_length  = cutoff*2;
-const int default_mbuf_depth = 4;
 
 void mb_add_particle(microblock* microblock, particle_t* particle_addr);
 void mb_expand_particle(microblock* microblock, int new_max);
