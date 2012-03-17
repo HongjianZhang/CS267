@@ -567,7 +567,7 @@ of Processors.}
 \label{plot:thread_breakdown_10000}
 \end{figure}
 
-\subsection{OpenMP using microblocks}
+\subsection{OpenMP using Microblocks}
 
 Figure~\ref{openmp_mb_n}  demonstrates the OpenMP microblocks implementation also scales roughly with O(n). When p is low, performance scales very precisely as O(n) for low n whereas for higher p, performance scales with O(n) for higher n. The former phenomenon is explained by overhead and synchronization needed by OpenMP using many threads that is exposed at low n. The latter phenomenon can again be explained by memory effects: when p is higher, more memory caches are available thus allowing the handling of higher n. Figure~\ref{openmp_mb_p} demonstrates that the OpenMP implementation scales by O(n/p) when n$\geq$10000 and p$\leq$12. The boundary at 12 corresponds with known features of the Hopper architecture: the system is composed of 12-core processors. When the number of cores used increases above 12, requests must now be serviced on a larger interconnect network, incurring higher overhead. Due to the leveling off with p in this figure, OpenMP was not even attempted for p$>$24.
 
@@ -638,6 +638,8 @@ Thus, compared to MPI, OpenMP must transmit far more data between cores for the 
 
 The OpenMP implementation required only 20 additional lines of code to the serial microblocks program, while the MPI microblocks implementation required significant amounts of design, programming, and debugging time. Thus the OpenMP implementation is still competitive, as it allows significant speedups with minimal coding effort, as long as p is small. Considered together, the MPI and OpenMP results motivate a future solution where MPI is used for major region blocking and OpenMP is used for microblocks on a single node.
 
+The CUDA implementation was shown to run in O(n) time, but is still slower than the MPI microblocks implementation when 12 or more CPU cores are used. The CUDA implementation is slower than the MPI implementation by a constant factor of approximately four. However, if the shared memory optimization discussed in Section~\ref{gpu-optimization-section} is implemented in the CUDA code, the CUDA implementation may become faster than the MPI implementation.
+
 \section{Discussion and Conclusion}
 \label{conclusion-section}
 
@@ -661,6 +663,6 @@ missed the convenience of having an automatically handled cache.\end{itemize}
 
 \subsection{Final Conclusions}
 
-Efficient serial and parallel implementations of the particle simulator were written, and shown to run in O(n) or near O(n) time. The fastest implementation for more than 500 particles was found to be MPI microblocks. A further optimization to the CUDA implementation was discussed, involving the use of shared memory, that could make the CUDA code faster than MPI. This remains as future work.
+Efficient serial and parallel implementations of the particle simulator were written, and shown to run in O(n) and near O(n/p) time. The fastest implementation for more than 500 particles was found to be MPI microblocks. A further optimization to the CUDA implementation was discussed, involving the use of shared memory, that could make the CUDA code faster than MPI. This remains as future work.
 
 \end{document}
