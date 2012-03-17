@@ -66,7 +66,7 @@
 
 \section{Introduction}
 
-The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using micro-blocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP, Pthreads and CUDA frameworks.
+The aim of this assignment was to develop parallel implementations of a particle simulator, using both shared memory and distributed memory systems. This was achieved by first developing serial implementations of the collision detection algorithm that ran in O(n) time. Two serial implementations were written: one using microblocks and one using a prune-and-sweep algorithm. These serial implementations were then parallelized using the MPI, OpenMP, Pthreads and CUDA frameworks.
 
 Each of these serial and parallel algorithms are described in Section \ref{algorithm-section}, and their performance is analyzed in Section \ref{results-section}. Finally, Section \ref{conclusion-section} draws conclusions from these results.
 
@@ -79,9 +79,9 @@ Each of these serial and parallel algorithms are described in Section \ref{algor
 \section{Description of Algorithms}
 \label{algorithm-section}
 
-The micro-blocks and prune-and-sweep algorithms for collision detection are described below. This is then followed by a discussion of how these algorithms were extended to parallel implementations.
+The microblocks and prune-and-sweep algorithms for collision detection are described below. This is then followed by a discussion of how these algorithms were extended to parallel implementations.
 
-\subsection{Serial Micro-blocks}
+\subsection{Serial Microblocks}
 
 The microblocking algorithm divides the simulation space into square blocks with side-lengths proportional to {\em cutoff}. After particle creation, each particle is assigned to a corresponding microblock. For each particle, we find its colliding neighbors by checking against all other particles in its own and neighboring microblocks. Since the forces are repulsive and the particle density is $\sim$1/2 particles per $\text{\em cutoff}^\text{~2}$, there are on average a small number of particles within each microblock. We explored a variety of microblock sizes and found that microblocks with side-lengths of $2\times\text{\em cutoff}$ to be optimal, corresponding to roughly 2 to 3 particles per block. Thus, during collision detection, each particle must check against roughly 21 other particles. A full collision detection sweep is done in $O(n)$ time. Calculating the force on each particle, updating its position, and assigning it to its new microblock is done independently for each particle, and thus takes $O(n)$ time.
 
@@ -175,7 +175,7 @@ if they are overlapping in all $N$ dimensions. Thus at each timestep
 we perform $N$ sorts, and check that $M(i,j)=\text{true}$ for each
 dimension. 
 
-\subsection{MPI using Micro-blocks}
+\subsection{MPI using Microblocks}
 
 To parallelize the microblocks algorithm, we first coursely subdivide the simulation space into regions, and assign each region to a separate processor. Analogously to microblocks, regions send particles near the border to neighboring regions as ghosts, and a region checks for collisions between all owned particles and ghost particles. Particles are migrated across region boundaries as needed. Within a single region, we use the serial microblocks implementation.
 
@@ -213,7 +213,7 @@ Within a single processor we use the sequential sweep and prune algorithm.
 \subsubsection{Regions}
 
 A region structure contains fields that indicate the extents of its
-boundaries, $\text{min}_{x},\text{max}_{x},\text{min}_{y},\text{max}_{y}$,
+boundaries, $\text{min}_{x}$, $\text{max}_{x}$, $\text{min}_{y}$, and $\text{max}_{y}$,
 pointers to its neighboring regions, and a local sweep and prune
 structure for managing the particles local to the region. Particles
 may only be added or removed from a region using the \emph{add\_region\_particle
@@ -228,10 +228,10 @@ define the \emph{responsibility bounds}. A region is responsible for
 correctly computing the forces and updating the positions of all particles
 within its \emph{responsibility bounds.} The \emph{send bounds }of
 a region starts at a distance of \emph{cutoff }interior from the border
-and continues to the border. Any particles within the \emph{send bounds
+and continues outwards to the border. Any particles within the \emph{send bounds
 }need to have its position sent to the neighboring regions in order
 for the regions to accurately compute collisions along boundaries.
-The \emph{ghost bounds }of a region starts at the border and continues
+The \emph{ghost bounds }of a region starts at the border and continues outwards
 to a distance of \emph{cutoff }exterior to the border. The region
 will receive the positions of particles within the \emph{ghost bounds}
 from neighboring regions to use for handling collisions along the
@@ -269,7 +269,7 @@ The algorithm is summarized as :
 
 \subsection{OpenMP using Microblocks}
 
-The OpenMP implementation uses the microblocks algorithm as it was found to be extremely easy to develop. In fact, the serial microblocks algorithm was chosen intentionally to serve as this a precursor to OpenMP. Only two major adjustments were required from the serial base. OpenMP pragmas were added to farm out particle collision detection/force calculation, particle movements, and particle migrations, all by microblock. Also, in the particle migration code, locks were added to the microblock particle lists to prevent possible race conditions when multiple threads add or remove particles from the same microblock simultaneously. Implicit barriers sit between the force calculation, movement, and migration stages due to features of the OpenMP for pragma feature.
+Only minor modifications were necessary to transform the serial microblocks algorithm to a parallel implementation using OpenMP. OpenMP pragmas were added to distribute the particle collision detection/force calculation, particle movements, and particle migrations for each microblock to separate processors. Additional synchronization was needed to handle the cases where multiple threads attempt to add or remove particles from the same microblock simultaneously. We handle this situation by locking the microblock particle lists during additions and removals. Implicit barriers sit between the force calculation, movement, and migration stages due to the semantics of the OpenMP {\em for} pragma.
 
 \subsection{CUDA using Microblocks}
 
@@ -307,7 +307,7 @@ illustrated by the following pseudocode.
 \[
 \begin{aligned} & \text{for }i\text{ in }1\ldots M\text{ do :}\\
  & \quad\text{v0}:=\text{cas}(v[i],\text{EMPTY},\text{ADDING})\\
- & \quad\text{if v0 }=\text{EMPTY :}\\
+ & \quad\text{if v0 }==\text{EMPTY :}\\
  & \quad\quad s[i]=p\\
  & \quad\quad v[i]=\text{FULL}\\
  & \quad\quad\text{break}
@@ -327,15 +327,15 @@ The GPU simulation loops through three kernels, compute\_forces, move\_particles
 The following GPU-specific optimizations were attempted:
 
 \begin{itemize}
-\item {\em Particle migration: } In the initial algorithm, each micro-block thread scanned the global particle list every cycle, checking the location of each particle, and adding the appropriate particles to the micro-block's particle list. This meant that the particle lists were rebuilt from scratch every cycle. Once we figured out how to use atomic operations, each microblock instead migrated emigrant particles to their new micro-block when they moved. Since only a small fraction of the particles move across micro-block boundaries each cycle, this meant that the particle lists did not have to be rebuilt every cycle.
+\item {\em Particle migration: } In the initial algorithm, each microblock thread scanned the global particle list every cycle, checking the location of each particle, and adding the appropriate particles to the microblock's particle list. This meant that the particle lists were rebuilt from scratch every cycle. Once we figured out how to use atomic operations, each microblock instead migrated emigrant particles to their new microblock when they moved. Since only a small fraction of the particles move across microblock boundaries each cycle, this meant that the particle lists did not have to be rebuilt every cycle.
 
 \item {\em Single kernel: } Currently, three separate kernels are used to compute forces, move particles, and migrate particles. An attempt was made to combine these three kernels into a single macro-kernel, with {\em \_\_sync\_threads()} operations between the compute, move and migrate stages of computation.
 
 \item {\em Vector datatypes and local particle copy: } The particle position, velocity and acceleration values are stored using {\em double2} vector datatypes, to coalesce memory accesses. Also, if a kernel performs multiple operations on a particle, it copies the particle from global memory into its registers or local memory, modifies the particle, and then copies it back to global memory at the end.
 
-\item {\em Per-particle threads for calculating forces: } Initially, when computing forces, a separate thread was launched for each micro-block. This thread computed the forces between all the particles in the micro-block, and the neighboring microblocks. The disadvantage of this is that the threads that are launched for empty microblocks are wasted computation. Therefore, a thread is instead launched for every particle in the system. This thread determines its micro-block, and computes the forces between itself and all other particles in its (and neighboring) microblock.
+\item {\em Per-particle threads for calculating forces: } Initially, when computing forces, a separate thread was launched for each microblock. This thread computed the forces between all the particles in the microblock, and the neighboring microblocks. The disadvantage of this is that the threads that are launched for empty microblocks are wasted computation. Therefore, a thread is instead launched for every particle in the system. This thread determines its microblock, and computes the forces between itself and all other particles in its (and neighboring) microblock.
 
-\item {\em Future work: shared memory: } A future optimization to the force calculation would be to arrange the thread launches so that all particles in a ``macro-block'' of micro-blocks run in the same thread block (or physical streaming multiprocessor). Each thread would then load its particle data from global memory into the shared memory. Since all the particles on the streaming multiprocessor are located near each other, they can read the position of all surrounding particles directly from shared memory. This would speed up memory accesses many-fold, and potentially speed up computation 2X-4X.
+\item {\em Future work: shared memory: } A future optimization to the force calculation would be to arrange the thread launches so that all particles in a ``macro-block'' of microblocks run in the same thread block (or physical streaming multiprocessor). Each thread would then load its particle data from global memory into the shared memory. Since all the particles on the streaming multiprocessor are located near each other, they can read the position of all surrounding particles directly from shared memory. This would speed up memory accesses many-fold, and potentially speed up computation 2X-4X.
 \end{itemize}
 
 
@@ -350,7 +350,7 @@ The following GPU-specific optimizations were attempted:
 
 The performance of the algorithms described in the previous section is reported here. The scaling of execution time with number of particles and number of processors is given, as well as how this execution time is allocated to the different parts of each algorithm.
 
-\subsection{Serial Micro-blocks}
+\subsection{Serial Microblocks}
 
 Figure~\ref{serial_mb_n} verifies the serial microblocks implementation is of O(n). The drop in performance for very high particle counts is most likely due to memory cache issues rather than algorithmic failure. Figure~\ref{serial_mb_flops} provides evidence to this theory as the floating point utilization (measured using CrayPAT) drops considerably as n increases. Even so, the latter figure demonstrates this problem is largely memory bound instead of compute bound, with most time spent setting up collision detection and comparing particle rather than actually calculating forces.
 
@@ -410,7 +410,7 @@ by sweep and prune than by the force and position updates.
 \end{figure}
 
 
-\subsection{MPI using Micro-blocks}
+\subsection{MPI using Microblocks}
 
 Figure~\ref{mpi_mb_n} shows the MPI microblocks implementation follows O(n) for various p. Similar to OpenMP, the same phenomena for higher n with low p and lower n with high p manifest for the same reasons (although here amplified in magnitude due to the larger problem space explored). Figure~\ref{mpi_mb_p} demonstrates the MPI microblocks implementation scales by O(n/p) as desired. The scaling for one million particles versus p most visibly demonstrates the power of the MPI implementation to exploit parallelism in this problem. In fact, since the MPI implementation strictly partitions the memory (compared to OpenMP), superscaling better than 1/p is exhibited as increasing p reduces the impact of memory issues. Even so, overhead costs from communication and synchronization limit the number of cores usable for sub-million particle problems to 48.
 
@@ -567,7 +567,7 @@ of Processors.}
 \label{plot:thread_breakdown_10000}
 \end{figure}
 
-\subsection{OpenMP using Micro-blocks}
+\subsection{OpenMP using microblocks}
 
 Figure~\ref{openmp_mb_n}  demonstrates the OpenMP microblocks implementation also scales roughly with O(n). When p is low, performance scales very precisely as O(n) for low n whereas for higher p, performance scales with O(n) for higher n. The former phenomenon is explained by overhead and synchronization needed by OpenMP using many threads that is exposed at low n. The latter phenomenon can again be explained by memory effects: when p is higher, more memory caches are available thus allowing the handling of higher n. Figure~\ref{openmp_mb_p} demonstrates that the OpenMP implementation scales by O(n/p) when n$\geq$10000 and p$\leq$12. The boundary at 12 corresponds with known features of the Hopper architecture: the system is composed of 12-core processors. When the number of cores used increases above 12, requests must now be serviced on a larger interconnect network, incurring higher overhead. Due to the leveling off with p in this figure, OpenMP was not even attempted for p$>$24.
 
@@ -601,7 +601,7 @@ Figure~\ref{openmp_mb_flops} shows that the floating point utilization (measured
 \label{openmp_mb_rtime}
 \end{figure}
 
-\subsection{CUDA using Micro-blocks}
+\subsection{CUDA using Microblocks}
 
 Figure~\ref{gpu_time_vs_n} shows the execution time of the particle simulation algorithm, running on a GPU, for different numbers of particles. The optimized algorithm is asymptotically faster than the naive O(n$^2$) algorithm. At 1000 particles, it is 30 times faster, while at 10 000 particles, it is 330 times faster. On a linear-linear plot, the execution time curve of the optimized algorithm is seen to be linear, with a gradient of 8$\mu$s/particle.
 
@@ -624,9 +624,9 @@ The plot in Figure~\ref{gpu_time_vs_n} includes all of the positive-effect optim
 
 \subsection{Performance Comparison of all Algorithms}
 
-Serial sweep and prune is faster than serial micro-blocks for n$<$10 000. When n$\geq$10 000, the serial micro-blocks code is faster. This is because the sweep and prune algorithm is extremely efficient at detecting collisions when n is small, but when n is large, the O(n$^2$) sort balloons.
+Serial sweep and prune is faster than serial microblocks for n$<$10 000. When n$\geq$10 000, the serial microblocks code is faster. This is because the sweep and prune algorithm is extremely efficient at detecting collisions when n is small, but when n is large, the O(n$^2$) sort balloons.
 
-The two MPI variants (prune and sweep, and microblocks) have similar performance for 500 and 1000 particles at all values of n. For more than 1000 particles, the micro-blocks variant is generally faster. The exception is when the number of processors is large, and hence number of particles per processor is small, as this reduces the amount of sorting that needs to be done on each processor. Both MPI variants are faster than the serial versions, as long as the total number of particles is greater than 500. If there are 500 particles or less, the serial code is faster, as there is insufficient computation to compensate for the MPI communication overhead.
+The two MPI variants (prune and sweep, and microblocks) have similar performance for 500 and 1000 particles at all values of n. For more than 1000 particles, the microblocks variant is generally faster. The exception is when the number of processors is large, and hence number of particles per processor is small, as this reduces the amount of sorting that needs to be done on each processor. Both MPI variants are faster than the serial versions, as long as the total number of particles is greater than 500. If there are 500 particles or less, the serial code is faster, as there is insufficient computation to compensate for the MPI communication overhead.
 
 The OpenMP implementation, using microblocks, is faster than the Pthreads implementation, which uses prune and sweep, for all particle and processor counts. However, the MPI microblocks implementation still outperforms the OpenMP implementation. This is due to three reasons:
 \begin{enumerate}
@@ -661,6 +661,6 @@ missed the convenience of having an automatically handled cache.\end{itemize}
 
 \subsection{Final Conclusions}
 
-Efficient serial and parallel implementations of the particle simulator were written, and shown to run in O(n) or near O(n) time. The fastest implementation for more than 500 particles was found to be MPI microblocks. A further optimization to the CUDA implementation was discussed, involving the use of shared memory, that could make the CUDA code faster than MPI. However, this still remains as future work.
+Efficient serial and parallel implementations of the particle simulator were written, and shown to run in O(n) or near O(n) time. The fastest implementation for more than 500 particles was found to be MPI microblocks. A further optimization to the CUDA implementation was discussed, involving the use of shared memory, that could make the CUDA code faster than MPI. This remains as future work.
 
 \end{document}
