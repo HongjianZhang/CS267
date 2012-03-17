@@ -661,4 +661,6 @@ missed the convenience of having an automatically handled cache.\end{itemize}
 
 \subsection{Final Conclusions}
 
+Efficient serial and parallel implementations of the particle simulator were written, and shown to run in O(n) or near O(n) time. The fastest implementation for more than 500 particles was found to be MPI microblocks. A further optimization to the CUDA implementation was discussed, involving the use of shared memory, that could make the CUDA code faster than MPI. However, this still remains as future work.
+
 \end{document}
