@@ -621,9 +621,19 @@ The plot in Figure~\ref{gpu_time_vs_n} includes all of the positive-effect optim
 
 \subsection{Performance Comparison of all Algorithms}
 
-Simon TODO
+Serial sweep and prune is faster than serial micro-blocks for n$<$10 000. When n$\geq$10 000, the serial micro-blocks code is faster. This is because the sweep and prune algorithm is extremely efficient at detecting collisions when n is small, but when n is large, the O(n$^2$) sort balloons.
 
-The MPI implementation summarily outperforms the OpenMP implementation. The MPI libraries for Hopper are able to handle intra-node messages fairly efficiently. The MPI programming model also enforces strict memory partitioning between nodes. The OpenMP model relies on coherence protocols to move microblock and particle data between cores for processing as necessary. (Also, recall microblocks are redistributed fairly often in order to keep workload stabilized.) Thus, compared to MPI, OpenMP must transmit far more data is being transferred between core for the same n and p$>$1. This result is unsurprising and results principally by design. The OpenMP implementation was developed to be a simple and easy extension of the serial code, being implemented with only about 20 more lines of code. (This was an experiment to see if serial programs can be made parallel quickly and still gain reasonable performance benefits.) The MPI microblocks implementation required significant amounts of design, programming, and debugging time. Thus, from a programming time standpoint, the OpenMP implementation is still competitive since it provided reasonable gains versus serial for small p. However, MPI is still required to scale to large p efficiently. The MPI and OpenMP results, considered together, motivate a future solution using MPI for major blocking, but handling the intra-cell microblocks algorithm using OpenMP with 4-12 threads. This would permit the use of more processing resources without driving up MPI synchronization and communication overhead.
+The two MPI variants (prune and sweep, and microblocks) have similar performance for 500 and 1000 particles at all values of n. For more than 1000 particles, the micro-blocks variant is generally faster. The exception is when the number of processors is large, and hence number of particles per processor is small, as this reduces the amount of sorting that needs to be done on each processor. Both MPI variants are faster than the serial versions, as long as the total number of particles is greater than 500. If there are 500 particles or less, the serial code is faster, as there is insufficient computation to compensate for the MPI communication overhead.
+
+The OpenMP implementation, using microblocks, is faster than the Pthreads implementation, which uses prune and sweep, for all particle and processor counts. However, the MPI microblocks implementation still outperforms the OpenMP implementation. This is due to three reasons:
+\begin{enumerate}
+\item The MPI libraries for Hopper are able to handle intra-node messages fairly efficiently
+\item The MPI programming model also strict memory partitioning between nodes
+\item The OpenMP model relies on coherence protocols to move microblock and particle data between cores for processing as necessary. 
+\end{enumerate}
+Thus, compared to MPI, OpenMP must transmit far more data between cores for the same n and p$>$1.
+
+The OpenMP implementation required only 20 additional lines of code to the serial microblocks program, while the MPI microblocks implementation required significant amounts of design, programming, and debugging time. Thus the OpenMP implementation is still competitive, as it allows significant speedups with minimal coding effort, as long as p is small. Considered together, the MPI and OpenMP results motivate a future solution where MPI is used for major region blocking and OpenMP is used for microblocks on a single node.
 
 \section{Discussion and Conclusion}
 \label{conclusion-section}
