@@ -5,9 +5,10 @@
 #include "common.h"
 
 const int default_mbuf_depth = 6;
-#define NO_MB 0
+const double micro_length = 2*cutoff;
 
 typedef struct microblock microblock;
+microblock* const NO_MB = 0;
 
 struct microblock
 {

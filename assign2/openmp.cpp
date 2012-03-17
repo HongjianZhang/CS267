@@ -12,8 +12,6 @@
 #include <pat_api.h>
 #endif
 
-const double micro_length  = cutoff*2;
-
 void mb_add_particle(microblock* microblock, particle_t* particle_addr);
 void mb_expand_particle(microblock* microblock, int new_max);
 void mb_rm_particle(microblock* microblock, int pos);
@@ -153,8 +151,8 @@ int main( int argc, char **argv )
 					mb_x = migrant->x * mfactor_x;
 					mb_y = migrant->y * mfactor_y;
 
-					mb_x = min(max(0,mb_x), num_micro_x);
-					mb_y = min(max(0,mb_y), num_micro_y);
+					mb_x = min(max(0,mb_x), num_micro_x-1);
+					mb_y = min(max(0,mb_y), num_micro_y-1);
 				   
 					mb_rm_particle(microblocks + mb, i);
 					mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, migrant);
@@ -273,8 +271,8 @@ void distribute_particles(microblock* microblocks, int num_micro_x, int num_micr
 		mb_x = particles[i].x * mfactor_x;
 		mb_y = particles[i].y * mfactor_y;
 		
-		mb_x = min(max(0,mb_x), num_micro_x);
-		mb_y = min(max(0,mb_y), num_micro_y);
+		mb_x = min(max(0,mb_x), num_micro_x-1);
+		mb_y = min(max(0,mb_y), num_micro_y-1);
 		
 		mb_add_particle(microblocks + mb_y*num_micro_x + mb_x, particles + i);
 	}

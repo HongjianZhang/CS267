@@ -10,8 +10,6 @@
 #include <pat_api.h>
 #endif
 
-const double micro_length  = cutoff*2;
-
 void mb_add_particle(microblock* microblock, particle_t* particle_addr);
 void mb_expand_particle(microblock* microblock, int new_max);
 void mb_rm_particle(microblock* microblock, int pos);

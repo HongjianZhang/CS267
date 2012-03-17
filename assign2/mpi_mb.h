@@ -15,8 +15,6 @@
 #define GHOST_TRUE	1
 #define GHOST_FALSE	0
 
-const double micro_length = 2*cutoff;
-
 extern MPI_Datatype PARTICLE;
 
 typedef struct {
