@@ -1,8 +1,6 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
-#include <stdio.h>
-
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
 

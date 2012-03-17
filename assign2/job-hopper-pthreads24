@@ -7,4 +7,10 @@
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
-aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 500 -o pthreads.txt
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 500 
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 1000 
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 10000 
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 40000 
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 100000
+ 
+aprun -d 24 -n 1 -N 1 ./pthreads -p 24 -n 10000 -o pthreads10000.txt 

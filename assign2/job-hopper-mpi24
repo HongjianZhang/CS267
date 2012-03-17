@@ -1,5 +1,5 @@
 #PBS -V
-#PBS -l mppwidth=24
+#PBS -l mppwidth=120
 #PBS -l mppnppn=24
 #PBS -l mppdepth=1
 #PBS -l walltime=0:02:00
@@ -7,4 +7,12 @@
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
-aprun -d 1 -n 24 -N 24 ./mpi -n 500 -o mpi.txt
+aprun -d 1 -n 120 -N 24 ./mpi -n 500
+aprun -d 1 -n 120 -N 24 ./mpi -n 1000
+aprun -d 1 -n 120 -N 24 ./mpi -n 5000
+aprun -d 1 -n 120 -N 24 ./mpi -n 10000
+aprun -d 1 -n 120 -N 24 ./mpi -n 40000
+aprun -d 1 -n 120 -N 24 ./mpi -n 100000
+aprun -d 1 -n 120 -N 24 ./mpi -n 1000000
+
+aprun -d 1 -n 120 -N 24 ./mpi -n 10000 -o mpi10000.txt
